@@ -20,7 +20,8 @@ struct ContentView: View {
                         onSettingsTap: { showSettings = true },
                         onMacTap: { withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showDeviceSwitcher = true } },
                         onCardTap: { client.switchTo($0) },
-                        onRetryConnect: { client.restart() }
+                        onRetryConnect: { client.restart() },
+                        onRefresh: { client.requestSnapshot() }
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 } else {

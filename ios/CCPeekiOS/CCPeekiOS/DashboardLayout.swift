@@ -13,6 +13,7 @@ struct DashboardScreen: View {
     let onMacTap: () -> Void
     let onCardTap: (String) -> Void
     let onRetryConnect: () -> Void
+    let onRefresh: () -> Void
 
     @State private var currentPage = 0
 
@@ -60,9 +61,20 @@ struct DashboardScreen: View {
 
             TabView(selection: $currentPage) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { idx, pageProcs in
-                    DashboardGrid(processes: pageProcs, orientation: orientation, onCardTap: onCardTap)
-                        .padding(.init(top: padY, leading: padX, bottom: padX, trailing: padX))
-                        .tag(idx)
+                    // PRD 3.6.6 下拉刷新: 每页套 ScrollView, refreshable 即使内容不溢出
+                    // 也能识别下拉手势. minHeight 撑满避免 grid 顶部塌陷.
+                    ScrollView {
+                        DashboardGrid(processes: pageProcs, orientation: orientation, onCardTap: onCardTap)
+                            .padding(.init(top: padY, leading: padX, bottom: padX, trailing: padX))
+                            .frame(minHeight: geo.size.height)
+                    }
+                    .scrollIndicators(.hidden)
+                    .refreshable {
+                        onRefresh()
+                        // 给 spinner 露脸时间, 否则刷新瞬间结束没有反馈
+                        try? await Task.sleep(nanoseconds: 600_000_000)
+                    }
+                    .tag(idx)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -403,7 +415,8 @@ private extension Array {
         onSettingsTap: {},
         onMacTap: {},
         onCardTap: { _ in },
-        onRetryConnect: {}
+        onRetryConnect: {},
+        onRefresh: {}
     )
 }
 
@@ -415,7 +428,8 @@ private extension Array {
         onSettingsTap: {},
         onMacTap: {},
         onCardTap: { _ in },
-        onRetryConnect: {}
+        onRetryConnect: {},
+        onRefresh: {}
     )
 }
 
@@ -427,7 +441,8 @@ private extension Array {
         onSettingsTap: {},
         onMacTap: {},
         onCardTap: { _ in },
-        onRetryConnect: {}
+        onRetryConnect: {},
+        onRefresh: {}
     )
 }
 
@@ -439,7 +454,8 @@ private extension Array {
         onSettingsTap: {},
         onMacTap: {},
         onCardTap: { _ in },
-        onRetryConnect: {}
+        onRetryConnect: {},
+        onRefresh: {}
     )
 }
 
