@@ -35,6 +35,15 @@ public enum ProcessChain {
     }
 
     public static func ttyName(of pid: Int32) -> String? {
+        if let s = ttyViaSysctl(pid: pid) {
+            return s
+        }
+        // macOS 26 上观察到 sysctl + devname_r 路径全链返回 nil (e_tdev 失效?),
+        // 退到 fork /bin/ps -o tt= 拿. ps 是系统命令, 比 sysctl 字段 layout 稳定.
+        return ttyViaPS(pid: pid)
+    }
+
+    private static func ttyViaSysctl(pid: Int32) -> String? {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
         var info = kinfo_proc()
         var size = MemoryLayout<kinfo_proc>.size
@@ -49,6 +58,32 @@ public enum ProcessChain {
             return nil
         }
         return "/dev/" + name
+    }
+
+    private static func ttyViaPS(pid: Int32) -> String? {
+        let task = Process()
+        task.launchPath = "/bin/ps"
+        // 用 tty 列 (完整设备名 ttys001) 而不是 tt 列 (缩写 s001),
+        // 后者加 /dev/ 前缀会拼出 /dev/s001 这种不存在的路径, 跟 Terminal.app 的
+        // `tty of t` (返回 /dev/ttys001) 也对不上.
+        task.arguments = ["-o", "tty=", "-p", "\(pid)"]
+        let outPipe = Pipe()
+        task.standardOutput = outPipe
+        task.standardError = Pipe()
+        do {
+            try task.run()
+        } catch {
+            return nil
+        }
+        task.waitUntilExit()
+        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+        guard let raw = String(data: data, encoding: .utf8) else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != "??" else { return nil }
+        if trimmed.hasPrefix("/dev/") {
+            return trimmed
+        }
+        return "/dev/" + trimmed
     }
 }
 #endif

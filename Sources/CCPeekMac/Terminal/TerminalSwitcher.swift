@@ -19,6 +19,13 @@ enum TerminalSwitcher {
     }
 
     static func `switch`(to process: ClaudeProcess) -> SwitchResult {
+        DiagnosticLogger.info("switch", "切换尝试", context: [
+            "processId": process.id,
+            "kind": process.terminal?.kind.rawValue ?? "nil",
+            "tty": process.terminal?.tty ?? "nil",
+            "appPID": process.terminal.map { "\($0.appPID)" } ?? "nil",
+        ])
+
         guard let location = process.terminal else {
             return .unsupported(reason: "未识别终端 app")
         }
@@ -34,6 +41,9 @@ enum TerminalSwitcher {
         case .iterm2:
             return runIterm2Switch(tty: location.tty)
         case .ghostty, .warp, .vscode, .unknown:
+            DiagnosticLogger.info("switch", "终端不支持 tab 定位, 仅激活 app", context: [
+                "kind": location.kind.rawValue,
+            ])
             return .activatedAppOnly
         }
     }
@@ -42,29 +52,58 @@ enum TerminalSwitcher {
 
     private static func runAppleTerminalSwitch(tty: String?) -> SwitchResult {
         guard let tty else {
+            DiagnosticLogger.warn("switch", "Terminal.app: tty 为 nil, 仅激活 app")
             return .activatedAppOnly
         }
+        // selected 之前选, frontmost 之后设, 避免部分 macOS 版本下顺序倒置导致 tab 没切到.
         let script = """
         tell application "Terminal"
             activate
             repeat with w in windows
                 repeat with t in tabs of w
                     if (tty of t) is "\(tty)" then
-                        set frontmost of w to true
                         set selected of t to true
-                        return
+                        set frontmost of w to true
+                        return "matched"
                     end if
                 end repeat
             end repeat
+            return "not_found"
         end tell
         """
-        return runAppleScript(script, terminal: "Terminal.app")
+        return runAppleScript(
+            script,
+            terminal: "Terminal.app",
+            expectedTTY: tty,
+            listCurrentTTYs: listAppleTerminalTTYs
+        )
+    }
+
+    /// 没匹配到时调用, 把 Terminal.app 当前所有 tab 的 tty 列到日志, 方便对比.
+    private static func listAppleTerminalTTYs() -> String? {
+        let script = """
+        tell application "Terminal"
+            set out to ""
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set out to out & (tty of t) & ","
+                end repeat
+            end repeat
+            return out
+        end tell
+        """
+        var err: NSDictionary?
+        guard let s = NSAppleScript(source: script) else { return nil }
+        let result = s.executeAndReturnError(&err)
+        if err != nil { return nil }
+        return result.stringValue
     }
 
     // MARK: - iTerm2
 
     private static func runIterm2Switch(tty: String?) -> SwitchResult {
         guard let tty else {
+            DiagnosticLogger.warn("switch", "iTerm2: tty 为 nil, 仅激活 app")
             return .activatedAppOnly
         }
         // iTerm2 模型: window > tab > session, tty 在 session 上.
@@ -77,26 +116,37 @@ enum TerminalSwitcher {
                         if (tty of s) is "\(tty)" then
                             select s
                             select t
-                            tell w to set index to 1
-                            return
+                            tell w to select
+                            return "matched"
                         end if
                     end repeat
                 end repeat
             end repeat
+            return "not_found"
         end tell
         """
-        return runAppleScript(script, terminal: "iTerm2")
+        return runAppleScript(
+            script,
+            terminal: "iTerm2",
+            expectedTTY: tty,
+            listCurrentTTYs: nil
+        )
     }
 
     // MARK: -
 
-    private static func runAppleScript(_ source: String, terminal: String) -> SwitchResult {
+    private static func runAppleScript(
+        _ source: String,
+        terminal: String,
+        expectedTTY: String?,
+        listCurrentTTYs: (() -> String?)?
+    ) -> SwitchResult {
         var errorInfo: NSDictionary?
         guard let script = NSAppleScript(source: source) else {
             DiagnosticLogger.error("applescript", "AppleScript 编译失败", context: ["terminal": terminal])
             return .failed(reason: "AppleScript 编译失败 (\(terminal))")
         }
-        _ = script.executeAndReturnError(&errorInfo)
+        let descriptor = script.executeAndReturnError(&errorInfo)
         if let errorInfo {
             let msg = (errorInfo[NSAppleScript.errorMessage] as? String) ?? "未知错误"
             let code = (errorInfo[NSAppleScript.errorNumber] as? Int) ?? 0
@@ -111,6 +161,21 @@ enum TerminalSwitcher {
             }
             return .failed(reason: "\(terminal) AppleScript 执行失败: \(msg)")
         }
-        return .ok
+        let returned = descriptor.stringValue ?? ""
+        if returned == "matched" {
+            DiagnosticLogger.info("switch", "\(terminal) tab 切换成功", context: ["tty": expectedTTY ?? ""])
+            return .ok
+        }
+        // not_found: app 已经 activate 过了, tab 没切到.
+        var ctx: [String: String] = [
+            "terminal": terminal,
+            "expectedTTY": expectedTTY ?? "nil",
+            "applescriptReturn": returned,
+        ]
+        if let listCurrentTTYs, let allTTYs = listCurrentTTYs() {
+            ctx["currentTTYs"] = allTTYs
+        }
+        DiagnosticLogger.warn("switch", "\(terminal) 未匹配到 tty, 仅激活 app", context: ctx)
+        return .activatedAppOnly
     }
 }
