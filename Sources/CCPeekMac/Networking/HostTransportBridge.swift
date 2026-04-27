@@ -36,7 +36,17 @@ final class HostTransportBridge {
         transport.onReceive = { [weak self] message, peer in
             self?.handleIncoming(message, from: peer)
         }
-        transport.onInvitationReceived = { peer, accept in
+        transport.onInvitationReceived = { [weak self] peer, accept in
+            // MVP 1:1 (PRD 3.7.1): 已连一台时拒绝新邀请, 即使是已配对设备.
+            // 拒绝即可, 不附 reason: MPC invitationHandler 不支持携带文本.
+            if let connected = self?.transport.connectedPeers, !connected.isEmpty {
+                DiagnosticLogger.info("transport", "拒绝邀请: 已有连接 (1:1 约束)", context: [
+                    "peer": peer.displayName,
+                    "connected": connected.map(\.displayName).joined(separator: ","),
+                ])
+                accept(false)
+                return
+            }
             // 已配对: 静默接受. 未配对: 弹 NSAlert 询问用户.
             if PairedClientStorage.contains(peer.displayName) {
                 DiagnosticLogger.info("transport", "auto-accept paired", context: ["peer": peer.displayName])
