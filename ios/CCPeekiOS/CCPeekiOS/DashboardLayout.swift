@@ -14,6 +14,8 @@ struct DashboardScreen: View {
     let onCardTap: (String) -> Void
     let onRetryConnect: () -> Void
     let onRefresh: () -> Void
+    /// PRD 3.3.5 stale window: 非 nil 表示已断开但仍在 5 分钟内 → 显示进程列表(半透明) + 顶部 stale banner.
+    let staleSince: Date?
 
     @State private var currentPage = 0
 
@@ -34,7 +36,12 @@ struct DashboardScreen: View {
                        onMacTap: onMacTap,
                        onSettingsTap: onSettingsTap)
 
-                if !isConnected {
+                if let staleSince {
+                    StaleBanner(since: staleSince)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if isOffline {
                     DisconnectedView(onRetry: onRetryConnect)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if processes.isEmpty {
@@ -42,15 +49,21 @@ struct DashboardScreen: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     pageContent
+                        .opacity(staleSince != nil ? 0.55 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: staleSince != nil)
                 }
 
                 BottomBar(currentPage: currentPage,
                           totalPages: max(1, pages.count),
                           isConnected: isConnected)
             }
+            .animation(.easeInOut(duration: 0.3), value: staleSince != nil)
         }
         .preferredColorScheme(.dark)
     }
+
+    /// 真正"已离线" — 断开且超出 stale window (或从未连过).
+    private var isOffline: Bool { !isConnected && staleSince == nil }
 
     @ViewBuilder
     private var pageContent: some View {
@@ -237,6 +250,46 @@ private struct SignalBars: View {
     }
 }
 
+// MARK: - Stale banner (PRD 3.3.5: 断开 ≤ 5 分钟时显示, 提醒"非实时, X 分钟前的状态")
+
+private struct StaleBanner: View {
+    let since: Date
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Theme.statusInput)
+                    .frame(width: 6, height: 6)
+                    .shadow(color: Theme.statusInputGlow, radius: 2)
+                Text(label(elapsed: context.date.timeIntervalSince(since)))
+                    .font(Theme.mono(11, weight: .regular))
+                    .tracking(0.4)
+                    .foregroundStyle(Theme.fgMuted)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(Color.oklch(0.30, 0.06, 70, alpha: 0.20))
+            .overlay(
+                Rectangle().fill(Color.oklch(0.50, 0.10, 70, alpha: 0.32)).frame(height: 0.5),
+                alignment: .top
+            )
+            .overlay(
+                Rectangle().fill(Color.oklch(0.50, 0.10, 70, alpha: 0.32)).frame(height: 0.5),
+                alignment: .bottom
+            )
+        }
+    }
+
+    private func label(elapsed: TimeInterval) -> String {
+        let minutes = Int(elapsed / 60)
+        if minutes < 1 { return "已断开 · 显示刚才的状态" }
+        return "已断开 · 显示 \(minutes) 分钟前的状态"
+    }
+}
+
 // MARK: - Bottom bar
 
 private struct BottomBar: View {
@@ -416,7 +469,8 @@ private extension Array {
         onMacTap: {},
         onCardTap: { _ in },
         onRetryConnect: {},
-        onRefresh: {}
+        onRefresh: {},
+        staleSince: nil
     )
 }
 
@@ -429,7 +483,8 @@ private extension Array {
         onMacTap: {},
         onCardTap: { _ in },
         onRetryConnect: {},
-        onRefresh: {}
+        onRefresh: {},
+        staleSince: nil
     )
 }
 
@@ -442,7 +497,8 @@ private extension Array {
         onMacTap: {},
         onCardTap: { _ in },
         onRetryConnect: {},
-        onRefresh: {}
+        onRefresh: {},
+        staleSince: nil
     )
 }
 
@@ -455,7 +511,22 @@ private extension Array {
         onMacTap: {},
         onCardTap: { _ in },
         onRetryConnect: {},
-        onRefresh: {}
+        onRefresh: {},
+        staleSince: nil
+    )
+}
+
+#Preview("Stale (≤ 5min)") {
+    DashboardScreen(
+        processes: Array(sampleProcesses().prefix(3)),
+        macName: "MacBook Pro",
+        isConnected: false,
+        onSettingsTap: {},
+        onMacTap: {},
+        onCardTap: { _ in },
+        onRetryConnect: {},
+        onRefresh: {},
+        staleSince: Date(timeIntervalSinceNow: -120)
     )
 }
 

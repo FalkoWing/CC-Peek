@@ -21,7 +21,8 @@ struct ContentView: View {
                         onMacTap: { withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showDeviceSwitcher = true } },
                         onCardTap: { client.switchTo($0) },
                         onRetryConnect: { client.restart() },
-                        onRefresh: { client.requestSnapshot() }
+                        onRefresh: { client.requestSnapshot() },
+                        staleSince: staleSince
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 } else {
@@ -54,6 +55,13 @@ struct ContentView: View {
     private var isConnected: Bool {
         if case .connected = client.status { return true }
         return false
+    }
+
+    /// PRD 3.3.5: 断开但仍在 5 分钟 stale window 内 → 返回 disconnect 时间 (UI 据此显示 stale banner).
+    /// connected / 超出 window / 从未连过 时返回 nil.
+    private var staleSince: Date? {
+        guard !isConnected, let t = client.lastDisconnectedAt else { return nil }
+        return Date().timeIntervalSince(t) <= PeekClient.staleWindow ? t : nil
     }
 }
 

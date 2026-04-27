@@ -23,17 +23,24 @@ final class PeekClient: ObservableObject {
     @Published private(set) var processes: [TransportMessage.SnapshotProcess] = []
     @Published private(set) var lastError: String?
     @Published private(set) var lastSwitchResult: TransportMessage.SwitchResult?
+    /// 上次 peer disconnect 的时间. 用于 PRD 3.3.5 的 "断开 ≤ 5 分钟保留最后已知状态" 分层判断.
+    @Published private(set) var lastDisconnectedAt: Date?
 
     var isPaired: Bool { pairedHostName != nil }
 
+    /// PRD 3.3.5 stale window: 断开后保留最后已知状态展示的时长上限 (秒).
+    static let staleWindow: TimeInterval = 300
+
     private let transport: MPCTransport
     private var currentPeer: TransportPeer?
+    private var presenceTickTimer: AnyCancellable?
 
     init() {
         let name = UIDevice.current.name
         self.transport = MPCTransport(displayName: name, role: .client, autoInvite: false)
         self.pairedHostName = PairedHostStorage.pairedHostName
         wireCallbacks()
+        startPresenceTicker()
     }
 
     func start() {
@@ -102,6 +109,17 @@ final class PeekClient: ObservableObject {
         }
     }
 
+    /// 仅在断开期间需触发 objectWillChange 让 UI 重算 stale → offline 边界.
+    /// 30s tick 对 5min 阈值的精度足够 (最大延迟 30s, 用户感知不到).
+    private func startPresenceTicker() {
+        presenceTickTimer = Timer.publish(every: 30, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self, self.lastDisconnectedAt != nil else { return }
+                self.objectWillChange.send()
+            }
+    }
+
     private func wireCallbacks() {
         transport.onPeerDiscovered = { [weak self] peer in
             guard let self else { return }
@@ -128,6 +146,7 @@ final class PeekClient: ObservableObject {
         transport.onPeerConnected = { [weak self] peer in
             guard let self else { return }
             self.currentPeer = peer
+            self.lastDisconnectedAt = nil
             self.status = .connected(peer: peer.displayName)
             do {
                 try self.transport.send(.snapshotRequest, to: peer)
@@ -139,7 +158,9 @@ final class PeekClient: ObservableObject {
         transport.onPeerDisconnected = { [weak self] peer in
             guard let self else { return }
             if self.currentPeer?.id == peer.id { self.currentPeer = nil }
-            self.processes = []
+            // PRD 3.3.5: 不清 processes, 让 UI 在 stale window 内继续展示最后已知状态.
+            // 超出 stale window 由 ContentView 基于 lastDisconnectedAt 决策切到 offline 大屏.
+            self.lastDisconnectedAt = Date()
             self.status = .disconnected
         }
 
