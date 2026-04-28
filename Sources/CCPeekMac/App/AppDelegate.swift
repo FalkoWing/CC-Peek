@@ -37,17 +37,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         AppPaths.ensureAppSupportDirectory()
 
-        statusBarController = StatusBarController(store: store)
-
-        let watcher = EventLogWatcher(store: store)
-        eventWatcher = watcher
-        watcher.start()
-
         // M3.C: 启动 host transport. MPC 第一次广告会触发"本地网络"权限弹窗;
         // 拒绝后下次启动可在系统设置里恢复, 不阻塞菜单栏功能.
         let bridge = HostTransportBridge(store: store)
         transportBridge = bridge
         bridge.start()
+
+        // StatusBarController 订阅 bridge.connectedPeerCount，bridge 必须先创建
+        statusBarController = StatusBarController(store: store, bridge: bridge)
+
+        let watcher = EventLogWatcher(store: store)
+        eventWatcher = watcher
+        watcher.start()
 
         // 首次启动展示引导. 已配置过的用户启动时不再弹.
         if !OnboardingWindowController.hasCompleted() {

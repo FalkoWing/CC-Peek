@@ -12,7 +12,10 @@ import CCPeekCore
 /// - 收 snapshot_request -> snapshot
 /// - 收 switch_to        -> 调 TerminalSwitcher, 回 switch_result
 @MainActor
-final class HostTransportBridge {
+final class HostTransportBridge: ObservableObject {
+    /// 当前连接的 iPhone 数量（菜单栏图标连接绿点订阅这个）
+    @Published private(set) var connectedPeerCount: Int = 0
+
     private let transport: MPCTransport
     private let store: ProcessStateStore
     private var cancellables: Set<AnyCancellable> = []
@@ -25,13 +28,15 @@ final class HostTransportBridge {
     }
 
     func start() {
-        transport.onPeerConnected = { peer in
+        transport.onPeerConnected = { [weak self] peer in
             // PRD 3.3.5: 连上后 iPhone 必发 snapshot_request, host 不主动 push
             // (避免和 snapshot_request 的回包重复一份).
             DiagnosticLogger.info("transport", "peer connected", context: ["peer": peer.displayName])
+            Task { @MainActor in self?.refreshPeerCount() }
         }
-        transport.onPeerDisconnected = { peer in
+        transport.onPeerDisconnected = { [weak self] peer in
             DiagnosticLogger.info("transport", "peer disconnected", context: ["peer": peer.displayName])
+            Task { @MainActor in self?.refreshPeerCount() }
         }
         transport.onReceive = { [weak self] message, peer in
             self?.handleIncoming(message, from: peer)
@@ -74,6 +79,11 @@ final class HostTransportBridge {
     func stop() {
         cancellables.removeAll()
         transport.stop()
+        connectedPeerCount = 0
+    }
+
+    private func refreshPeerCount() {
+        connectedPeerCount = transport.connectedPeers.count
     }
 
     // MARK: - 推送

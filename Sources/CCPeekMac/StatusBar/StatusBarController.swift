@@ -8,10 +8,13 @@ final class StatusBarController: NSObject {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
     private let store: ProcessStateStore
+    private let bridge: HostTransportBridge
     private var cancellables = Set<AnyCancellable>()
+    private var appearanceObservation: NSKeyValueObservation?
 
-    init(store: ProcessStateStore) {
+    init(store: ProcessStateStore, bridge: HostTransportBridge) {
         self.store = store
+        self.bridge = bridge
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popover = NSPopover()
         super.init()
@@ -29,29 +32,43 @@ final class StatusBarController: NSObject {
         }
     }
 
-    /// 监听 store.processes, 节流 1s 重绘 (PRD 3.5.2 重绘节流要求).
+    /// 监听 store.processes + bridge.connectedPeerCount, 节流 1s 重绘 (PRD 3.5.2 重绘节流要求).
+    /// 同时监听 NSApp.effectiveAppearance KVO，深浅色切换时立即重绘。
     private func bindIconUpdates() {
-        store.$processes
+        Publishers.CombineLatest(store.$processes, bridge.$connectedPeerCount)
             .throttle(for: .seconds(1), scheduler: RunLoop.main, latest: true)
-            .sink { [weak self] processes in
-                self?.refreshIcon(for: processes)
+            .sink { [weak self] processes, peerCount in
+                self?.refreshIcon(processes: processes, peerCount: peerCount)
             }
             .store(in: &cancellables)
+
+        appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.refreshIcon(processes: self.store.processes, peerCount: self.bridge.connectedPeerCount)
+            }
+        }
     }
 
-    private func refreshIcon(for processes: [ClaudeProcess]) {
+    private func refreshIcon(processes: [ClaudeProcess], peerCount: Int) {
         let count = processes.filter {
             $0.state == .waitingInput || $0.state == .waitingPermission
         }.count
-        statusItem.button?.image = StatusIconBuilder.build(waitingCount: count)
+        statusItem.button?.image = StatusIconBuilder.build(
+            waitingCount: count,
+            hasConnectedPhone: peerCount > 0,
+            hasHookError: false  // MVP: 暂不接入 Hook 异常实时检测
+        )
     }
 
     private func setupPopover() {
-        popover.contentSize = NSSize(width: 360, height: 480)
+        popover.contentSize = NSSize(width: 400, height: 520)
         popover.behavior = .transient
         popover.animates = true
+        // 强制深色外观，避免系统浅色 mode 下 popover vibrancy 透出浅色调
+        popover.appearance = NSAppearance(named: .darkAqua)
         popover.contentViewController = NSHostingController(
-            rootView: DashboardView(store: store)
+            rootView: DashboardView(store: store, bridge: bridge)
         )
     }
 
