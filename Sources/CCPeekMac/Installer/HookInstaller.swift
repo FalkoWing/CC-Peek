@@ -67,7 +67,7 @@ enum HookInstaller {
             existingText = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
             willCreateSettingsFile = false
             let ts = Int(Date().timeIntervalSince1970)
-            backupPath = url.appendingPathExtension("backup-\(ts)").path
+            backupPath = url.appendingPathExtension("ccpeek-backup-\(ts)").path
         } else {
             existingText = ""
             willCreateSettingsFile = true
