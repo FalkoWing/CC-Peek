@@ -27,6 +27,7 @@ mkdir -p "$APP/Contents/Resources"
 cp "$BIN_DIR/CCPeekMac" "$APP/Contents/MacOS/CCPeekMac"
 cp "$BIN_DIR/CCPeekHook" "$APP/Contents/MacOS/CCPeekHook"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 echo "==> adhoc 签名 (开发期足够; 发布前用 Developer ID 替换)"
 codesign --force --deep --options runtime \
