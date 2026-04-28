@@ -97,6 +97,20 @@ ditto build/CCPeek.app /Applications/CCPeek.app
 open /Applications/CCPeek.app
 ```
 
+生成可分享的拖拽安装 DMG：
+
+```bash
+./scripts/build-dmg.sh
+```
+
+脚本会生成：
+
+```text
+build/CCPeek.dmg
+```
+
+打开 DMG 后，窗口左侧是 `CCPeek.app`，右侧是 `Applications` 文件夹。用户把 app 拖到 `Applications` 即可完成安装。背景图里也包含 Gatekeeper 提示：如果打开时报“无法验证开发者”，到“系统设置 > 隐私与安全性”往下滑找到 CC Peek，然后点击“仍要打开”。
+
 开发期脚本使用 adhoc 签名。正式分发前需要替换为 Developer ID 签名与完整发布流程。
 
 ## 安装 Claude Code Hook
