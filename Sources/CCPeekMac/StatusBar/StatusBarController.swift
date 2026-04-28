@@ -10,7 +10,8 @@ final class StatusBarController: NSObject {
     private let store: ProcessStateStore
     private let bridge: HostTransportBridge
     private var cancellables = Set<AnyCancellable>()
-    private var appearanceObservation: NSKeyValueObservation?
+    private var appAppearanceObservation: NSKeyValueObservation?
+    private var buttonAppearanceObservation: NSKeyValueObservation?
 
     init(store: ProcessStateStore, bridge: HostTransportBridge) {
         self.store = store
@@ -22,18 +23,22 @@ final class StatusBarController: NSObject {
         setupStatusItem()
         setupPopover()
         bindIconUpdates()
+        refreshIconAfterStatusItemSettles()
     }
 
     private func setupStatusItem() {
         if let button = statusItem.button {
-            button.image = StatusIconBuilder.build(waitingCount: 0)
+            button.image = StatusIconBuilder.build(
+                waitingCount: 0,
+                appearance: button.effectiveAppearance
+            )
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
     }
 
     /// 监听 store.processes + bridge.connectedPeerCount, 节流 1s 重绘 (PRD 3.5.2 重绘节流要求).
-    /// 同时监听 NSApp.effectiveAppearance KVO，深浅色切换时立即重绘。
+    /// 同时监听 App / 菜单栏按钮 appearance，深浅色切换时立即重绘。
     private func bindIconUpdates() {
         Publishers.CombineLatest(store.$processes, bridge.$connectedPeerCount)
             .throttle(for: .seconds(1), scheduler: RunLoop.main, latest: true)
@@ -42,11 +47,35 @@ final class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
 
-        appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+        appAppearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in
-                guard let self else { return }
-                self.refreshIcon(processes: self.store.processes, peerCount: self.bridge.connectedPeerCount)
+                self?.refreshIcon()
             }
+        }
+
+        buttonAppearanceObservation = statusItem.button?.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor in
+                self?.refreshIcon()
+            }
+        }
+
+        DistributedNotificationCenter.default()
+            .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshIcon()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func refreshIcon() {
+        refreshIcon(processes: store.processes, peerCount: bridge.connectedPeerCount)
+    }
+
+    private func refreshIconAfterStatusItemSettles() {
+        Task { @MainActor in
+            await Task.yield()
+            refreshIcon()
         }
     }
 
@@ -54,10 +83,12 @@ final class StatusBarController: NSObject {
         let count = processes.filter {
             $0.state == .waitingInput || $0.state == .waitingPermission
         }.count
+        let buttonAppearance = statusItem.button?.effectiveAppearance
         statusItem.button?.image = StatusIconBuilder.build(
             waitingCount: count,
             hasConnectedPhone: peerCount > 0,
-            hasHookError: false  // MVP: 暂不接入 Hook 异常实时检测
+            hasHookError: false,  // MVP: 暂不接入 Hook 异常实时检测
+            appearance: buttonAppearance
         )
     }
 

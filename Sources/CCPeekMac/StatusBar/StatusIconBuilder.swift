@@ -3,7 +3,7 @@ import SwiftUI
 
 /// 合成菜单栏图标 (PRD 3.5.2 / MacUI-2 设计稿对齐).
 ///
-/// 主图：自定义 eye glyph (椭圆 stroke + 中心填圆，路径对齐 cc-peek-ui 设计稿 SVG)
+/// 主图：Twin Beacons glyph (左右双端点 + 上下连接弧线，对齐 cc-peek-ui/icon-lab.html 方案 02)
 /// 三层徽章 (按优先级互斥渲染):
 ///   - 数字徽章 (右上, 待处理进程数 1-9 / "9+")
 ///   - Hook 错误红点 (右上, 仅 waitingCount=0 时)
@@ -27,7 +27,7 @@ enum StatusIconBuilder {
         // (徽章外圈 insetBy(-1,-1) 会向外扩 1px，画布太小会被裁切)
         let size = NSSize(width: 24, height: 20)
         let img = NSImage(size: size, flipped: false) { _ in
-            drawEyeGlyph(in: size, isDark: isDark)
+            drawTwinBeaconsGlyph(in: size, isDark: isDark)
 
             if waitingCount > 0 {
                 drawNumberBadge(count: waitingCount, in: size, isDark: isDark)
@@ -45,26 +45,68 @@ enum StatusIconBuilder {
         return img
     }
 
-    // MARK: - 主图：eye glyph
+    // MARK: - 主图：Twin Beacons glyph
 
-    private static func drawEyeGlyph(in size: NSSize, isDark: Bool) {
+    private static func drawTwinBeaconsGlyph(in size: NSSize, isDark: Bool) {
         let main = isDark
             ? NSColor.white.withAlphaComponent(0.92)
             : NSColor.black.withAlphaComponent(0.85)
 
-        // 椭圆外框 (jelly bean shape)，对应 SVG path 的简化
-        // 24×20 画布上眼睛主图占 16×12 居中：rect (4, 4, 16, 12)，中心 (12, 10)
-        let ovalRect = NSRect(x: 4, y: 4, width: 16, height: 12)
-        let oval = NSBezierPath(ovalIn: ovalRect)
-        oval.lineWidth = 1.4
+        // 左右两个端点代表 Mac / iPhone；上下弧线代表近场连接。
+        let leftBeacon = NSBezierPath(ovalIn: NSRect(x: 4.5, y: 7.3, width: 5.4, height: 5.4))
+        leftBeacon.lineWidth = 1.55
+        leftBeacon.lineCapStyle = .round
+        leftBeacon.lineJoinStyle = .round
         main.setStroke()
-        oval.stroke()
+        leftBeacon.stroke()
 
-        // 中心填圆 (对应 SVG circle r=1.6，缩放后 r ≈ 2 px，居中 (12, 10))
-        let pupilRect = NSRect(x: 10, y: 8, width: 4, height: 4)
-        let pupil = NSBezierPath(ovalIn: pupilRect)
-        main.setFill()
-        pupil.fill()
+        let rightBeacon = NSBezierPath(ovalIn: NSRect(x: 14.1, y: 7.3, width: 5.4, height: 5.4))
+        rightBeacon.lineWidth = 1.55
+        rightBeacon.lineCapStyle = .round
+        rightBeacon.lineJoinStyle = .round
+        rightBeacon.stroke()
+
+        let bridge = NSBezierPath()
+        bridge.move(to: NSPoint(x: 9.9, y: 10))
+        bridge.line(to: NSPoint(x: 14.1, y: 10))
+        bridge.lineWidth = 1.35
+        bridge.lineCapStyle = .round
+        bridge.lineJoinStyle = .round
+        bridge.stroke()
+
+        let topArc = NSBezierPath()
+        topArc.move(to: NSPoint(x: 5.2, y: 14.4))
+        topArc.curve(
+            to: NSPoint(x: 12.0, y: 17.0),
+            controlPoint1: NSPoint(x: 7.0, y: 16.1),
+            controlPoint2: NSPoint(x: 9.2, y: 17.0)
+        )
+        topArc.curve(
+            to: NSPoint(x: 18.8, y: 14.4),
+            controlPoint1: NSPoint(x: 14.8, y: 17.0),
+            controlPoint2: NSPoint(x: 17.0, y: 16.1)
+        )
+        topArc.lineWidth = 1.15
+        topArc.lineCapStyle = .round
+        topArc.lineJoinStyle = .round
+        topArc.stroke()
+
+        let bottomArc = NSBezierPath()
+        bottomArc.move(to: NSPoint(x: 5.2, y: 5.6))
+        bottomArc.curve(
+            to: NSPoint(x: 12.0, y: 3.0),
+            controlPoint1: NSPoint(x: 7.0, y: 3.9),
+            controlPoint2: NSPoint(x: 9.2, y: 3.0)
+        )
+        bottomArc.curve(
+            to: NSPoint(x: 18.8, y: 5.6),
+            controlPoint1: NSPoint(x: 14.8, y: 3.0),
+            controlPoint2: NSPoint(x: 17.0, y: 3.9)
+        )
+        bottomArc.lineWidth = 1.15
+        bottomArc.lineCapStyle = .round
+        bottomArc.lineJoinStyle = .round
+        bottomArc.stroke()
     }
 
     // MARK: - 数字徽章 (右上)
