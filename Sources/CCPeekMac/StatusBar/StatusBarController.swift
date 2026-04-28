@@ -12,6 +12,14 @@ final class StatusBarController: NSObject {
     private var cancellables = Set<AnyCancellable>()
     private var appAppearanceObservation: NSKeyValueObservation?
     private var buttonAppearanceObservation: NSKeyValueObservation?
+    private var lastIconKey: IconKey?
+
+    private struct IconKey: Equatable {
+        let waitingCount: Int
+        let hasConnectedPhone: Bool
+        let hasHookError: Bool
+        let isDark: Bool
+    }
 
     init(store: ProcessStateStore, bridge: HostTransportBridge) {
         self.store = store
@@ -84,6 +92,17 @@ final class StatusBarController: NSObject {
             $0.state == .waitingInput || $0.state == .waitingPermission
         }.count
         let buttonAppearance = statusItem.button?.effectiveAppearance
+        let isDark = (buttonAppearance ?? NSApp.effectiveAppearance)
+            .bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let key = IconKey(
+            waitingCount: count,
+            hasConnectedPhone: peerCount > 0,
+            hasHookError: false,
+            isDark: isDark
+        )
+        guard key != lastIconKey else { return }
+        lastIconKey = key
+
         statusItem.button?.image = StatusIconBuilder.build(
             waitingCount: count,
             hasConnectedPhone: peerCount > 0,

@@ -83,7 +83,10 @@ final class HostTransportBridge: ObservableObject {
     }
 
     private func refreshPeerCount() {
-        connectedPeerCount = transport.connectedPeers.count
+        let count = transport.connectedPeers.count
+        if connectedPeerCount != count {
+            connectedPeerCount = count
+        }
     }
 
     // MARK: - 推送
