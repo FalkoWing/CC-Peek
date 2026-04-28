@@ -26,21 +26,26 @@ enum StatusIconBuilder {
         // 24×20 画布：比眼睛主图大一圈，留出徽章 outline 描边的 1px 边距
         // (徽章外圈 insetBy(-1,-1) 会向外扩 1px，画布太小会被裁切)
         let size = NSSize(width: 24, height: 20)
-        let img = NSImage(size: size, flipped: false) { _ in
-            drawTwinBeaconsGlyph(in: size, isDark: isDark)
 
-            if waitingCount > 0 {
-                drawNumberBadge(count: waitingCount, in: size, isDark: isDark)
-                if hasHookError { drawErrorDot(in: size, isDark: isDark) }
-            } else {
-                if hasHookError {
-                    drawErrorDot(in: size, isDark: isDark)
-                } else if hasConnectedPhone {
-                    drawConnectedDot(in: size, isDark: isDark)
-                }
+        // 即时绘制 (lockFocus) 而非 NSImage(size:flipped:handler:) 的 lazy 闭包：
+        // 后者会被 NSStatusItem 的 _updateReplicants timer 在不完整 graphics context 中反复重放，
+        // 导致 CoreText 在 NSAttributedString.size() 内部踩到 nil attribute 崩溃 (macOS 26 实测).
+        let img = NSImage(size: size)
+        img.lockFocusFlipped(false)
+        drawTwinBeaconsGlyph(in: size, isDark: isDark)
+
+        if waitingCount > 0 {
+            drawNumberBadge(count: waitingCount, in: size, isDark: isDark)
+            if hasHookError { drawErrorDot(in: size, isDark: isDark) }
+        } else {
+            if hasHookError {
+                drawErrorDot(in: size, isDark: isDark)
+            } else if hasConnectedPhone {
+                drawConnectedDot(in: size, isDark: isDark)
             }
-            return true
         }
+        img.unlockFocus()
+
         img.isTemplate = false
         return img
     }
@@ -113,7 +118,10 @@ enum StatusIconBuilder {
 
     private static func drawNumberBadge(count: Int, in size: NSSize, isDark: Bool) {
         let label = count >= 10 ? "9+" : "\(count)"
-        let font = NSFont.monospacedSystemFont(ofSize: 8.5, weight: .bold)
+        // macOS 26 上 monospacedSystemFont + 非整数 size 会让 CoreText 内部 fontDescriptor
+        // attribute 字典出现 nil，str.size() 直接抛 NSInvalidArgumentException 崩溃。
+        // 改用 systemFont + 整数 size 规避。
+        let font = NSFont.systemFont(ofSize: 9, weight: .heavy)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: NSColor(red: 0.10, green: 0.06, blue: 0.0, alpha: 1.0), // 偏黑暖色
