@@ -29,6 +29,10 @@ cp "$BIN_DIR/CCPeekHook" "$APP/Contents/MacOS/CCPeekHook"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
+# SwiftPM 给依赖生成的 *_*.bundle (本地化字符串等). 不拷进去, Bundle.module 会 fatalError 闪退.
+# 例: KeyboardShortcuts_KeyboardShortcuts.bundle
+find -L "$BIN_DIR" -maxdepth 1 -name "*.bundle" -type d -exec cp -R {} "$APP/Contents/Resources/" \;
+
 echo "==> adhoc 签名 (开发期足够; 发布前用 Developer ID 替换)"
 codesign --force --deep --options runtime \
     --sign - \

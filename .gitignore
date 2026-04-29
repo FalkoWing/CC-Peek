@@ -11,5 +11,8 @@ xcuserdata/
 # macOS
 .DS_Store
 
+# 崩溃日志 (用户提供给开发排查的快照, 不该入库)
+*.ips
+
 # Claude Code per-user settings
 .claude/

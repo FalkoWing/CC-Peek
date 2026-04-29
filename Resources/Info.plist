@@ -30,6 +30,8 @@
     <string>CC Peek 需要控制 Terminal/iTerm2 来切换到对应窗口或 tab。</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>CC Peek 需要发现并连接到同一网络下的 iPhone 端，用于实时同步 Claude Code 进程状态。</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>CC Peek 通过 MultipeerConnectivity 连接同网段 iPhone, 系统在某些情况下会用蓝牙加速设备发现。</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_cc-peek-v1._tcp</string>
