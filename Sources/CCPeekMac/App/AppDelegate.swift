@@ -75,17 +75,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         // MacUI-2.5 全局热键：主动触发，不走去抖（按热键关 panel 应该立即生效）
+        // 通用设置里的"快捷键在鼠标位置打开"开关 → 只影响热键路径, 不影响点 statusItem / launch 弹.
         KeyboardShortcuts.onKeyDown(for: .togglePeek) { [weak self] in
-            self?.statusBarController?.presenter.toggle()
+            let atMouse = UserDefaults.standard.bool(forKey: DashboardPresenter.shortcutOpensAtMouseKey)
+            self?.statusBarController?.presenter.toggle(preferMouseOrigin: atMouse)
         }
 
         bootstrapped = true
 
         // 首次启动 / 退出后重新打开 app 时，主动弹一次主页面。
         // 不在 onboarding 期间（首次配置流程占据视线，不要叠 panel）。
-        // 用 async 让出 runloop，让可能到来的 didBecomeActive 先到（被去抖拦下，避免抖动）。
+        // 延迟 0.2s 给 NSStatusItem 的 button.window 时间 layout 完成,
+        // 否则 panelOrigin 拿到 frame=(0,0,1,1) 会算出左上角落点 (panelOrigin 也加了 sanity check 兜底).
+        // 同时让出 runloop 给可能到来的 didBecomeActive 先到 (被去抖拦下避免抖动).
         if !OnboardingWindowController.isVisible {
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                 self?.triggerPassive(reason: "launch")
             }
         }

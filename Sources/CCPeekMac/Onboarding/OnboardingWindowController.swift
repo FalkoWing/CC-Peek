@@ -50,13 +50,15 @@ final class OnboardingWindowController: NSWindowController {
         )
         window.title = "CC Peek 引导"
         window.isReleasedWhenClosed = false
-        window.center()
         let controller = OnboardingWindowController(window: window)
         let hostingView = OnboardingView(onFinish: { [weak controller] in
             OnboardingWindowController.markCompleted()
             controller?.close()
         })
         window.contentViewController = NSHostingController(rootView: hostingView)
+        // center 必须在 setContentViewController 之后调: hosting view 的 intrinsic size
+        // 会触发 window resize, 在 center 之前设会让 center 计算的 origin 失效.
+        window.center()
         return controller
     }
 }

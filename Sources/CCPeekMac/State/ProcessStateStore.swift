@@ -67,15 +67,24 @@ final class ProcessStateStore: ObservableObject {
         processes = bySession.values.sorted { $0.startedAt < $1.startedAt }
     }
 
-    /// 移除已死的孤儿进程 (Claude Code 崩溃/被 kill 时不会触发 SessionEnd 事件).
-    /// 探活策略:
-    ///   - 有 terminal.shellPID 时, sysctl 探这个 PID; shell 死则进程也死
-    ///   - 没 terminal 时, 等 staleAfter 没新事件再清 (避免误杀刚启动还在等解析的)
+    /// 移除已死的孤儿进程 (Claude Code 崩溃/被 kill / Ctrl-C 退出时不会触发 SessionEnd 事件).
+    /// 探活策略 (按可靠性排序):
+    ///   1. 有 claudePID 时, sysctl 探这个 PID; Claude 进程死了 session 必死.
+    ///      关键: 不能只看 shellPID — 用户 Ctrl-C 退出 Claude 但保留 tab 是常态,
+    ///      此时 shell 还活但 Claude 已死, 旧 session 必须清.
+    ///   2. 没 claudePID 时回退到 shellPID 探活 (兼容老版本 hook 没写 claude_pid 的情况).
+    ///   3. 都没有时, 等 staleAfter 没新事件再清.
     func pruneDead(staleAfter: TimeInterval = 300) {
         let now = Date()
         var toRemove: [(sid: String, reason: String)] = []
 
         for (sid, proc) in bySession {
+            if let claudePID = proc.claudePID {
+                if ProcessChain.parentPID(of: claudePID) == nil {
+                    toRemove.append((sid, "claude pid \(claudePID) 已退出"))
+                }
+                continue
+            }
             if let shell = proc.terminal?.shellPID {
                 if ProcessChain.parentPID(of: shell) == nil {
                     toRemove.append((sid, "shell pid \(shell) 已退出"))

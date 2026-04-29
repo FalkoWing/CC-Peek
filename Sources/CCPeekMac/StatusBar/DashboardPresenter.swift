@@ -21,7 +21,14 @@ final class DashboardPresenter: NSObject {
     private var localKeyMonitor: Any?
 
     private static let firstUseHintShownKey = "ccpeek.firstUseHintShown"
+    static let shortcutOpensAtMouseKey = "ccpeek.shortcutOpensAtMouse"
     private static let panelSize = NSSize(width: 400, height: 520)
+
+    /// Panel 落点策略.
+    private enum PanelOriginStrategy {
+        case auto      // 贴菜单栏 icon 下方; statusItem 异常 → 鼠标所在屏右上角兜底
+        case atMouse   // panel 中心对齐鼠标位置 (用户在通用设置里开了"快捷键在鼠标位置打开")
+    }
 
     init(store: ProcessStateStore, bridge: HostTransportBridge, statusItem: NSStatusItem) {
         self.store = store
@@ -57,7 +64,9 @@ final class DashboardPresenter: NSObject {
     }
 
     /// 智能切换：popover/panel 已显示则关；否则按 statusItem 可见性选择路径。
-    func toggle() {
+    /// - parameter preferMouseOrigin: true → 强制走 panel 路径并把 panel 中心对齐鼠标位置
+    ///   (用户开了"快捷键在鼠标位置打开"时由全局热键回调传入).
+    func toggle(preferMouseOrigin: Bool = false) {
         if popover.isShown {
             popover.performClose(nil)
             return
@@ -66,10 +75,12 @@ final class DashboardPresenter: NSObject {
             closePanel()
             return
         }
-        if isStatusItemVisible() {
+        if preferMouseOrigin {
+            showPanel(strategy: .atMouse)
+        } else if isStatusItemVisible() {
             showPopover()
         } else {
-            showPanel()
+            showPanel(strategy: .auto)
         }
     }
 
@@ -120,7 +131,7 @@ final class DashboardPresenter: NSObject {
 
     // MARK: - Panel
 
-    private func showPanel() {
+    private func showPanel(strategy: PanelOriginStrategy = .auto) {
         // 每次开新 panel 前先关旧的
         closePanel()
 
@@ -162,7 +173,7 @@ final class DashboardPresenter: NSObject {
         p.contentView?.layer?.masksToBounds = true
         p.hidesOnDeactivate = false
 
-        p.setFrameOrigin(panelOrigin())
+        p.setFrameOrigin(panelOrigin(strategy: strategy))
         p.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -183,30 +194,50 @@ final class DashboardPresenter: NSObject {
     }
 
     /// Panel 落点策略：
-    /// - 优先：锚到 statusItem 按钮下方（panel 中心点对齐按钮中心，水平 clamp 到屏幕内），
-    ///   这样无论走 popover 还是 panel 路径，位置都贴近 icon，体验一致。
-    /// - 兜底：button.window 不在任何屏幕内（被 Bartender 移到屏外 / 完全没 statusItem）→ 鼠标所在屏右上角。
-    /// 顶部留 2pt 透气，避免 panel shadow 被菜单栏底边切掉。
-    private func panelOrigin() -> NSPoint {
+    /// - `.atMouse`：panel 中心对齐鼠标位置, clamp 到鼠标所在屏 visibleFrame 内
+    /// - `.auto`：贴 statusItem 按钮下方 (panel 中心对齐按钮中心, 水平 clamp 到屏幕内);
+    ///   statusItem 异常 (button.window 不在任何屏 / 还没 layout 完成) → 鼠标所在屏右上角兜底
+    /// 顶部留 2pt 透气, 避免 panel shadow 被菜单栏底边切掉.
+    private func panelOrigin(strategy: PanelOriginStrategy = .auto) -> NSPoint {
         let topMargin: CGFloat = 2
         let edgeMargin: CGFloat = 4
+
+        if strategy == .atMouse {
+            let mouse = NSEvent.mouseLocation
+            let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) })
+                ?? NSScreen.main
+                ?? NSScreen.screens.first!
+            let visible = screen.visibleFrame
+            var x = mouse.x - Self.panelSize.width / 2
+            var y = mouse.y - Self.panelSize.height / 2
+            x = max(visible.minX + edgeMargin,
+                    min(x, visible.maxX - Self.panelSize.width - edgeMargin))
+            y = max(visible.minY + edgeMargin,
+                    min(y, visible.maxY - Self.panelSize.height - topMargin))
+            return NSPoint(x: x, y: y)
+        }
 
         if let item = statusItem,
            let button = item.button,
            let buttonWindow = button.window {
             let buttonFrame = buttonWindow.frame
-            let center = NSPoint(x: buttonFrame.midX, y: buttonFrame.midY)
-            if let screen = NSScreen.screens.first(where: { $0.frame.contains(center) }) {
-                let visible = screen.visibleFrame
-                var x = buttonFrame.midX - Self.panelSize.width / 2
-                x = max(visible.minX + edgeMargin,
-                        min(x, visible.maxX - Self.panelSize.width - edgeMargin))
-                let y = visible.maxY - Self.panelSize.height - topMargin
-                return NSPoint(x: x, y: y)
+            // sanity check: 首次启动时 statusItem 可能还没完成 layout, frame 是 (0,0,1,1)
+            // 之类的初始值, midX 极小. 此时算出来的 x 会被 clamp 到屏幕左边缘 → 落到左上角.
+            // midX 必须够大 (至少 50pt) 才认为已布局好.
+            if buttonFrame.midX > 50 {
+                let center = NSPoint(x: buttonFrame.midX, y: buttonFrame.midY)
+                if let screen = NSScreen.screens.first(where: { $0.frame.contains(center) }) {
+                    let visible = screen.visibleFrame
+                    var x = buttonFrame.midX - Self.panelSize.width / 2
+                    x = max(visible.minX + edgeMargin,
+                            min(x, visible.maxX - Self.panelSize.width - edgeMargin))
+                    let y = visible.maxY - Self.panelSize.height - topMargin
+                    return NSPoint(x: x, y: y)
+                }
             }
         }
 
-        // 兜底：鼠标所在屏右上角
+        // 兜底: 鼠标所在屏右上角
         let mouseLoc = NSEvent.mouseLocation
         let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLoc) })
             ?? NSScreen.main

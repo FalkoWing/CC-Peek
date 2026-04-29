@@ -463,6 +463,9 @@ private struct TerminalSupportDetail: View {
 
 private struct GeneralDetail: View {
     @State private var launchAtLogin = LaunchAtLoginManager.isEnabled
+    @State private var shortcutAtMouse = UserDefaults.standard.bool(
+        forKey: DashboardPresenter.shortcutOpensAtMouseKey
+    )
     @State private var statusMessage: String?
 
     var body: some View {
@@ -479,6 +482,26 @@ private struct GeneralDetail: View {
                         trailing: AnyView(
                             KeyboardShortcuts.Recorder(for: .togglePeek)
                                 .controlSize(.small)
+                        )
+                    )
+                    SettingsRow(
+                        leadingIcon: "cursorarrow",
+                        title: "快捷键在鼠标位置打开",
+                        subtitle: "开启后, 按下快捷键时主页面以鼠标为中心弹出; 关闭则贴菜单栏图标",
+                        divider: true,
+                        trailing: AnyView(
+                            Toggle("", isOn: Binding(
+                                get: { shortcutAtMouse },
+                                set: { newValue in
+                                    shortcutAtMouse = newValue
+                                    UserDefaults.standard.set(
+                                        newValue,
+                                        forKey: DashboardPresenter.shortcutOpensAtMouseKey
+                                    )
+                                }
+                            ))
+                            .labelsHidden()
+                            .toggleStyle(.switch)
                         )
                     )
                     SettingsRow(

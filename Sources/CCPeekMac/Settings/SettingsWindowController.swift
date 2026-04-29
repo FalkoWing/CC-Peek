@@ -8,6 +8,8 @@ final class SettingsWindowController: NSWindowController {
 
     static func show() {
         if let existing = shared, let window = existing.window {
+            // 重新 center: 用户上次拖偏 / 关闭后再开应回到中央, 不残留位置.
+            window.center()
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             return
