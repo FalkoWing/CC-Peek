@@ -173,6 +173,7 @@ private struct HookConfigDetail: View {
     @State private var hookInstalled = HookInstaller.isInstalled()
     @State private var hookActionMessage: String?
     @State private var showingHookDiff = false
+    @State private var hookBusy = false
     @State private var pendingPlan: HookInstaller.Plan?
 
     var body: some View {
@@ -203,8 +204,12 @@ private struct HookConfigDetail: View {
                         Spacer()
                     }
                     HStack(spacing: 8) {
-                        Button(hookInstalled ? "重新配置" : "安装 Hook") { reinstallHook() }
+                        Button(hookBusy ? "处理中..." : (hookInstalled ? "重新配置" : "安装 Hook")) {
+                            reinstallHook()
+                        }
+                        .disabled(hookBusy)
                         Button("查看 settings.json") { revealSettingsFile() }
+                            .disabled(hookBusy)
                     }
                     if let msg = hookActionMessage {
                         Text(msg)
@@ -223,15 +228,9 @@ private struct HookConfigDetail: View {
                     showingHookDiff = false
                     pendingPlan = nil
                 }, onApply: {
-                    let (ok, err) = HookInstaller.apply(plan: plan)
                     showingHookDiff = false
                     pendingPlan = nil
-                    if ok {
-                        hookInstalled = HookInstaller.isInstalled()
-                        hookActionMessage = "已写入. 备份在 \(plan.backupPath ?? "(未备份)")"
-                    } else {
-                        hookActionMessage = "写入失败: \(err ?? "未知错误")"
-                    }
+                    applyHook(plan)
                 })
             }
         }
@@ -255,8 +254,37 @@ private struct HookConfigDetail: View {
     }
 
     private func reinstallHook() {
-        pendingPlan = HookInstaller.computePlan()
-        showingHookDiff = true
+        guard !hookBusy else { return }
+        hookBusy = true
+        hookActionMessage = "正在准备配置预览..."
+        Task.detached {
+            let plan = HookInstaller.computePlan()
+            await MainActor.run {
+                pendingPlan = plan
+                showingHookDiff = true
+                hookBusy = false
+                hookActionMessage = nil
+            }
+        }
+    }
+
+    private func applyHook(_ plan: HookInstaller.Plan) {
+        guard !hookBusy else { return }
+        hookBusy = true
+        hookActionMessage = "正在写入配置..."
+        Task.detached {
+            let (ok, err) = HookInstaller.apply(plan: plan)
+            let installed = HookInstaller.isInstalled()
+            await MainActor.run {
+                hookBusy = false
+                hookInstalled = installed
+                if ok {
+                    hookActionMessage = "已写入. 备份在 \(plan.backupPath ?? "(未备份)")"
+                } else {
+                    hookActionMessage = "写入失败: \(err ?? "未知错误")"
+                }
+            }
+        }
     }
 
     private func revealSettingsFile() {

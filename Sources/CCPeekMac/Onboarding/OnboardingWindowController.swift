@@ -23,7 +23,7 @@ final class OnboardingWindowController: NSWindowController {
         if !force, hasCompleted() { return }
 
         // force=true (用户从设置点"重看引导") 必须重建, 否则旧 SwiftUI State
-        // 卡在 .done 上, 用户看到的就是"配置完成"页.
+        // 会保留上一次的步骤位置。
         if force {
             shared?.close()
             shared = nil
@@ -43,12 +43,12 @@ final class OnboardingWindowController: NSWindowController {
 
     private static func make() -> OnboardingWindowController {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 720, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "CC Peek 引导"
+        window.title = "CC Peek"
         window.isReleasedWhenClosed = false
         let controller = OnboardingWindowController(window: window)
         let hostingView = OnboardingView(onFinish: { [weak controller] in

@@ -48,7 +48,7 @@ enum HookInstaller {
 
     // MARK: - Plan / Apply
 
-    struct Plan: Equatable {
+    struct Plan: Equatable, Sendable {
         let existingText: String        // 当前 settings.json 全文 (不存在则 "")
         let targetText: String          // 应用后预期全文
         let backupPath: String?         // 应用时会创建的备份路径 (settings.json 不存在时为 nil)
