@@ -11,6 +11,10 @@ final class OnboardingWindowController: NSWindowController {
         UserDefaults.standard.bool(forKey: completedKey)
     }
 
+    static var isVisible: Bool {
+        shared?.window?.isVisible ?? false
+    }
+
     static func markCompleted() {
         UserDefaults.standard.set(true, forKey: completedKey)
     }

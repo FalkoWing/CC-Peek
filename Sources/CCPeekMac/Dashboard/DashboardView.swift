@@ -10,11 +10,15 @@ struct DashboardView: View {
 
     /// hook 错误状态 (MacUI-2 暂未接入实时检测，预留以便 MacUI-4 接通)
     var hasHookError: Bool = false
-    /// 独立 NSPanel 首次出现时显示快捷键引导 banner (MacUI-2.5 接入)
+    /// 独立 NSPanel 首次出现时显示快捷键引导 banner (MacUI-2.5)
     var showFirstUseHint: Bool = false
 
     var onOpenSettings: () -> Void = { SettingsWindowController.show() }
     var onQuit: () -> Void = { NSApp.terminate(nil) }
+    /// 用户主动关掉 firstUseHint banner 时的回调（持久化已显示标志，下次唤起不再出）
+    var onDismissFirstUseHint: () -> Void = {}
+
+    @State private var hintDismissed: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,6 +28,12 @@ struct DashboardView: View {
                     .padding(.top, 10)
             }
             header
+            if showFirstUseHint && !hintDismissed {
+                firstUseHintBanner
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
+                    .transition(.opacity)
+            }
             Divider().background(Theme.lineSoft)
 
             content
@@ -106,11 +116,6 @@ struct DashboardView: View {
     private var processList: some View {
         ScrollView {
             VStack(spacing: 0) {
-                if showFirstUseHint {
-                    firstUseHintBanner
-                        .padding(.horizontal, 10)
-                        .padding(.top, 8)
-                }
                 ForEach(store.processes) { process in
                     MacProcessRow(process: process)
                         .padding(.horizontal, 6)
@@ -174,19 +179,44 @@ struct DashboardView: View {
     }
 
     private var firstUseHintBanner: some View {
-        HStack(spacing: 8) {
-            Text("💡")
-                .font(.system(size: 12))
-            Text("图标被挤掉时，可在设置里设置全局快捷键随时唤起")
-                .font(Theme.ui(11.5, weight: .regular))
-                .foregroundStyle(Theme.fgMuted)
-            Spacer(minLength: 0)
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "lightbulb")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.statusInput)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("图标被挤掉时也能唤起")
+                    .font(Theme.ui(11.5, weight: .semibold))
+                    .foregroundStyle(Theme.fg)
+                Text("到「设置 → 通用」录制全局快捷键，菜单栏图标看不见时也能随时打开。")
+                    .font(Theme.ui(11, weight: .regular))
+                    .foregroundStyle(Theme.fgMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    hintDismissed = true
+                }
+                onDismissFirstUseHint()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.fgFaint)
+                    .padding(4)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.oklch(0.22, 0.011, 250, alpha: 0.6))
+                .fill(Color.oklch(0.22, 0.011, 250, alpha: 0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Theme.lineSoft, lineWidth: 0.5)
         )
     }
 

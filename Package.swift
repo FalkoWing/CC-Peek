@@ -10,6 +10,9 @@ let package = Package(
         .executable(name: "CCPeekMac", targets: ["CCPeekMac"]),
         .executable(name: "CCPeekMockClient", targets: ["CCPeekMockClient"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.0.0"),
+    ],
     targets: [
         .target(
             name: "CCPeekCore",
@@ -22,7 +25,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "CCPeekMac",
-            dependencies: ["CCPeekCore"],
+            dependencies: [
+                "CCPeekCore",
+                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
+            ],
             path: "Sources/CCPeekMac"
         ),
         .executableTarget(

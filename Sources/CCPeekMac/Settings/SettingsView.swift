@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import CCPeekCore
+import KeyboardShortcuts
 
 // MARK: - 分类
 
@@ -471,6 +472,16 @@ private struct GeneralDetail: View {
             SurfaceCard {
                 VStack(spacing: 0) {
                     SettingsRow(
+                        leadingIcon: "command",
+                        title: "全局快捷键",
+                        subtitle: "随时唤起 Dashboard；菜单栏图标被遮挡时也能用",
+                        divider: true,
+                        trailing: AnyView(
+                            KeyboardShortcuts.Recorder(for: .togglePeek)
+                                .controlSize(.small)
+                        )
+                    )
+                    SettingsRow(
                         leadingIcon: "power",
                         title: "开机自启",
                         subtitle: "系统登录时自动启动 CC Peek",
@@ -582,6 +593,8 @@ private struct AboutDetail: View {
                     )
                 }
             }
+
+            FAQCard()
         }
         .sheet(isPresented: $showingUninstallSheet) {
             UninstallInstructionsSheet(onClose: { showingUninstallSheet = false })
@@ -593,6 +606,93 @@ private struct AboutDetail: View {
         let short = info?["CFBundleShortVersionString"] as? String ?? "0.0"
         let build = info?["CFBundleVersion"] as? String ?? "0"
         return "v\(short) (\(build))"
+    }
+}
+
+// MARK: - FAQ 卡片 (MacUI-2.5)
+
+private struct FAQCard: View {
+    private struct Item: Identifiable {
+        let id = UUID()
+        let question: String
+        let answer: String
+    }
+
+    private let items: [Item] = [
+        Item(
+            question: "菜单栏图标看不见怎么办？",
+            answer: "可能被 Bartender / Hidden Bar / 刘海 / 其他 app 挤出可见区域。两条兜底：① 在「通用 → 全局快捷键」里录制热键，按下即可唤起 Dashboard；② 用 Spotlight / Launchpad 重新打开 CC Peek，会自动在屏幕右上角弹出 Dashboard。"
+        ),
+        Item(
+            question: "想让图标固定在菜单栏右侧？",
+            answer: "macOS 原生方式：按住 ⌘ 键拖动菜单栏图标到希望的位置，系统会记住顺序。Bartender / Hidden Bar 等第三方工具有各自的固定逻辑，参考其设置。"
+        ),
+        Item(
+            question: "想彻底关闭 / 卸载 CC Peek？",
+            answer: "关闭进程：Dashboard 底部「退出」按钮，或终端 pkill -f CCPeekMac。完整卸载请见「关于 → 卸载说明」（清理 settings.json 中的 hook、应用数据、LaunchAgent 后再删除 .app）。"
+        ),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("常见问题")
+                .font(Theme.ui(13, weight: .semibold))
+                .foregroundStyle(Theme.fgMuted)
+                .padding(.horizontal, 4)
+
+            SurfaceCard {
+                VStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
+                        FAQRow(question: item.question, answer: item.answer)
+                        if idx < items.count - 1 {
+                            DottedDivider()
+                                .padding(.horizontal, 14)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct FAQRow: View {
+    let question: String
+    let answer: String
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) { expanded.toggle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.fgMuted)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                    Text(question)
+                        .font(Theme.ui(12.5, weight: .medium))
+                        .foregroundStyle(Theme.fg)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if expanded {
+                Text(answer)
+                    .font(Theme.ui(12))
+                    .foregroundStyle(Theme.fgDim)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                    .padding(.leading, 24) // 与 chevron 对齐
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
     }
 }
 
