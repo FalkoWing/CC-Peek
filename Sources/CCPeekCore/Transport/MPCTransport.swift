@@ -32,10 +32,12 @@ public final class MPCTransport: NSObject, Transport {
     private let serviceType: String
     private let role: TransportRole
     private let autoInvite: Bool
+    private let pauseDiscoveryWhileConnected: Bool
 
     private var session: MCSession
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
+    private var isRunning = false
 
     /// browser 发现的 peer 缓存. 上层手动 invite 时凭 displayName 反查 MCPeerID.
     private var discoveredMCPeers: [String: MCPeerID] = [:]
@@ -52,11 +54,14 @@ public final class MPCTransport: NSObject, Transport {
     ///   - serviceType: 双方必须一致, 默认 TransportServiceType.mvp ("cc-peek-v1").
     ///   - autoInvite: client 角色发现 peer 后是否自动 invite. 默认 true (mock client 行为).
     ///                 iOS 端配对模式下传 false, 由 UI 让用户选目标后再调 `invite(_:)`.
+    ///   - pauseDiscoveryWhileConnected: 连接建立后暂停 Bonjour 广告/浏览, 断开后恢复.
+    ///                                  MVP 是 1:1 连接, 连接期间继续发现只会增加后台工作量.
     public init(
         displayName: String,
         role: TransportRole,
         serviceType: String = TransportServiceType.mvp,
-        autoInvite: Bool = true
+        autoInvite: Bool = true,
+        pauseDiscoveryWhileConnected: Bool = true
     ) {
         // displayName 限制: ≤ 63 bytes UTF-8, 非空. 截断保险.
         let safeName = MPCTransport.sanitize(displayName: displayName)
@@ -64,6 +69,7 @@ public final class MPCTransport: NSObject, Transport {
         self.serviceType = serviceType
         self.role = role
         self.autoInvite = autoInvite
+        self.pauseDiscoveryWhileConnected = pauseDiscoveryWhileConnected
         self.session = MCSession(
             peer: myPeerID,
             securityIdentity: nil,
@@ -81,26 +87,13 @@ public final class MPCTransport: NSObject, Transport {
     }
 
     public func start() {
-        switch role {
-        case .host:
-            startAdvertiser()
-        case .client:
-            startBrowser()
-        case .both:
-            startAdvertiser()
-            startBrowser()
-        }
+        isRunning = true
+        resumeDiscoveryIfAppropriate()
     }
 
     public func stop() {
-        advertiser?.stopAdvertisingPeer()
-        advertiser?.delegate = nil
-        advertiser = nil
-
-        browser?.stopBrowsingForPeers()
-        browser?.delegate = nil
-        browser = nil
-
+        isRunning = false
+        stopDiscovery(clearDiscoveredPeers: true)
         session.disconnect()
     }
 
@@ -123,7 +116,42 @@ public final class MPCTransport: NSObject, Transport {
 
     // MARK: - 内部
 
-    private func startAdvertiser() {
+    private func resumeDiscoveryIfAppropriate() {
+        guard isRunning else { return }
+        guard !pauseDiscoveryWhileConnected || session.connectedPeers.isEmpty else { return }
+
+        switch role {
+        case .host:
+            startAdvertiserIfNeeded()
+        case .client:
+            startBrowserIfNeeded()
+        case .both:
+            startAdvertiserIfNeeded()
+            startBrowserIfNeeded()
+        }
+    }
+
+    private func pauseDiscoveryForActiveConnection() {
+        guard pauseDiscoveryWhileConnected, !session.connectedPeers.isEmpty else { return }
+        stopDiscovery(clearDiscoveredPeers: false)
+    }
+
+    private func stopDiscovery(clearDiscoveredPeers: Bool) {
+        advertiser?.delegate = nil
+        advertiser?.stopAdvertisingPeer()
+        advertiser = nil
+
+        browser?.delegate = nil
+        browser?.stopBrowsingForPeers()
+        browser = nil
+
+        if clearDiscoveredPeers {
+            discoveredMCPeers.removeAll()
+        }
+    }
+
+    private func startAdvertiserIfNeeded() {
+        guard advertiser == nil else { return }
         let adv = MCNearbyServiceAdvertiser(
             peer: myPeerID,
             discoveryInfo: nil,
@@ -134,7 +162,8 @@ public final class MPCTransport: NSObject, Transport {
         self.advertiser = adv
     }
 
-    private func startBrowser() {
+    private func startBrowserIfNeeded() {
+        guard browser == nil else { return }
         let br = MCNearbyServiceBrowser(peer: myPeerID, serviceType: serviceType)
         br.delegate = self
         br.startBrowsingForPeers()
@@ -162,10 +191,12 @@ extension MPCTransport: MCSessionDelegate {
         DispatchQueue.main.async { [weak self] in
             switch state {
             case .connected:
+                self?.pauseDiscoveryForActiveConnection()
                 self?.onPeerConnected?(peer)
             case .notConnected:
                 self?.onPeerDisconnected?(peer)
                 self?.recordDisconnectAndMaybeRebuild()
+                self?.resumeDiscoveryIfAppropriate()
             case .connecting:
                 break
             @unknown default:
@@ -189,15 +220,7 @@ extension MPCTransport: MCSessionDelegate {
     /// 副作用: 当前所有连接会断, client 端依赖自身的 browser 自动重连.
     private func rebuildSession() {
         disconnectTimestamps.removeAll()
-        discoveredMCPeers.removeAll()
-
-        advertiser?.stopAdvertisingPeer()
-        advertiser?.delegate = nil
-        advertiser = nil
-
-        browser?.stopBrowsingForPeers()
-        browser?.delegate = nil
-        browser = nil
+        stopDiscovery(clearDiscoveredPeers: true)
 
         session.disconnect()
         session.delegate = nil
@@ -209,7 +232,7 @@ extension MPCTransport: MCSessionDelegate {
         )
         session.delegate = self
 
-        start()
+        resumeDiscoveryIfAppropriate()
     }
 
     public func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
