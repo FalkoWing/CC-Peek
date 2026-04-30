@@ -46,6 +46,29 @@ enum HookInstaller {
         return false
     }
 
+    /// 验证 settings.json 中 6 类 event 都注册了指向当前 hook binary 的条目.
+    /// 任一 event 缺失 / command 路径不一致 / 文件不存在 → false.
+    /// 用于 HookHealthMonitor 周期性健康检查.
+    static func validate() -> Bool {
+        guard let settings = readJSON(settingsFileURL()),
+              let hooks = settings["hooks"] as? [String: Any] else {
+            return false
+        }
+        let expectedCmd = hookBinaryPath()
+        for event in subscribedEvents {
+            guard let groups = hooks[event] as? [[String: Any]] else { return false }
+            let ok = groups.contains { group in
+                guard let inner = group["hooks"] as? [[String: Any]] else { return false }
+                return inner.contains {
+                    ($0[markerKey] as? String) == markerValue &&
+                        ($0["command"] as? String) == expectedCmd
+                }
+            }
+            if !ok { return false }
+        }
+        return true
+    }
+
     // MARK: - Plan / Apply
 
     struct Plan: Equatable, Sendable {

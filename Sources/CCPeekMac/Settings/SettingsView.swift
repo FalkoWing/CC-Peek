@@ -47,9 +47,7 @@ private enum SettingsCategory: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @State private var selection: SettingsCategory = .hookConfig
-
-    // hook 错误检测暂未接通；hookConfig sidebar 项的 badge 红点先固定 false (留待 hook 异常实时检测后接入)
-    private let hasHookError = false
+    @ObservedObject private var hookMonitor = HookHealthMonitor.shared
 
     var body: some View {
         NavigationSplitView {
@@ -74,7 +72,7 @@ struct SettingsView: View {
                         SidebarRow(
                             category: cat,
                             isSelected: selection == cat,
-                            showsBadge: cat == .hookConfig && hasHookError
+                            showsBadge: cat == .hookConfig && hookMonitor.hasError
                         )
                     }
                     .buttonStyle(.plain)
@@ -283,6 +281,8 @@ private struct HookConfigDetail: View {
                 } else {
                     hookActionMessage = "写入失败: \(err ?? "未知错误")"
                 }
+                // 重装后立刻重检一次, banner / 红点马上消失.
+                HookHealthMonitor.shared.checkNow()
             }
         }
     }
@@ -783,7 +783,6 @@ private struct UninstallInstructionsSheet: View {
 
 private struct DangerZoneDetail: View {
     @State private var showingCleanupConfirm = false
-    @State private var cleanupDone = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -791,7 +790,7 @@ private struct DangerZoneDetail: View {
 
             SurfaceCard {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("清理 CC Peek 写入到 ~/.claude/settings.json 的 Hook 配置、所有已配对设备信息、应用数据 (events.jsonl 与归档) 和偏好设置。清理后 app 将回到初始状态。")
+                    Text("将 CC Peek 完全恢复到首次启动状态：清掉 Hook 配置、配对的 iPhone、开机自启、全局快捷键、引导与偏好设置，以及 ~/Library/Application Support/cc-peek/ 下的应用数据。清理后 app 会自动重启。")
                         .font(Theme.ui(12.5))
                         .foregroundStyle(Theme.fgMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -802,29 +801,72 @@ private struct DangerZoneDetail: View {
                             .font(Theme.ui(12.5, weight: .semibold))
                     }
                     .buttonStyle(DangerButtonStyle())
-                    if cleanupDone {
-                        Text("已清理。可将 CC Peek.app 从 Applications 拖到废纸篓完成卸载。")
-                            .font(Theme.ui(11.5))
-                            .foregroundStyle(Theme.statusActive)
-                    }
                 }
                 .padding(16)
             }
         }
         .alert("清理 CC Peek 的配置数据?", isPresented: $showingCleanupConfirm) {
             Button("取消", role: .cancel) { }
-            Button("清理", role: .destructive) { performCleanup() }
+            Button("清理并重启", role: .destructive) { performCleanup() }
         } message: {
-            Text("将移除 settings.json 中的 hook 条目, 删除 ~/Library/Application Support/cc-peek/ 下的应用数据 (含 events.jsonl 与归档).\n\n如需完全卸载, 清理后请将 CC Peek.app 从 Applications 拖到废纸篓.")
+            Text("""
+            将清理以下内容:
+            • ~/.claude/settings.json 中的 Hook 条目
+            • 已配对的 iPhone 列表
+            • 开机自启
+            • 全局快捷键设置
+            • 引导与偏好设置 (UserDefaults)
+            • ~/Library/Application Support/cc-peek/ 下的应用数据 (events / 诊断日志 / 归档)
+
+            清理后 CC Peek 会自动重启, 回到首次启动状态. 如需完全卸载, 重启后将 CC Peek.app 从 Applications 拖到废纸篓即可.
+            """)
         }
     }
 
     private func performCleanup() {
+        // 1. settings.json hook 条目
         HookInstaller.uninstall()
-        let appSupport = AppPaths.appSupportDirectory
-        try? FileManager.default.removeItem(at: appSupport)
+
+        // 2. 开机自启 (SMAppService 或 LaunchAgent plist)
+        _ = LaunchAtLoginManager.setEnabled(false)
+
+        // 3. 已配对 iPhone
+        PairedClientStorage.clearAll()
+
+        // 4. 全局快捷键 (清掉用户录制的 combo)
+        KeyboardShortcuts.reset(.togglePeek)
+
+        // 5. UserDefaults 偏好 (引导 / 一次性提示 / 默认开机自启 sentinel / 鼠标位置开关)
+        let defaults = UserDefaults.standard
+        for key in [
+            OnboardingWindowController.completedKey,
+            OnboardingWindowController.launchAtLoginDefaultAppliedKey,
+            DashboardPresenter.firstUseHintShownKey,
+            DashboardPresenter.shortcutOpensAtMouseKey,
+        ] {
+            defaults.removeObject(forKey: key)
+        }
+        // 强 flush 防止 NSApp.terminate 抢在异步落盘之前 — relaunch 后必须读到清完的状态
+        defaults.synchronize()
+
+        // 6. 应用数据 (events.jsonl, archive, diagnostic.log)
+        try? FileManager.default.removeItem(at: AppPaths.appSupportDirectory)
         AppPaths.ensureAppSupportDirectory()
-        cleanupDone = true
+
+        // 7. relaunch — UserDefaults 改了之后重启才能让 SwiftUI / Onboarding 走全新流程
+        relaunchApp()
+    }
+
+    private func relaunchApp() {
+        let bundleURL = Bundle.main.bundleURL
+        let task = Process()
+        task.launchPath = "/usr/bin/open"
+        // -n 强制开新实例; 原实例随后 terminate
+        task.arguments = ["-n", bundleURL.path]
+        try? task.run()
+        DispatchQueue.main.async {
+            NSApp.terminate(nil)
+        }
     }
 }
 

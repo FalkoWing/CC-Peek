@@ -6,6 +6,9 @@ final class OnboardingWindowController: NSWindowController {
     private static var shared: OnboardingWindowController?
 
     static let completedKey = "ccpeek.onboardingCompleted"
+    /// 一次性 sentinel: 仅在首次完成 onboarding 时把开机自启默认置 on.
+    /// 用户之后手动关闭也不会复活, 因为 sentinel 一旦写入就不再触发.
+    static let launchAtLoginDefaultAppliedKey = "ccpeek.launchAtLoginDefaultApplied"
 
     static func hasCompleted() -> Bool {
         UserDefaults.standard.bool(forKey: completedKey)
@@ -17,6 +20,15 @@ final class OnboardingWindowController: NSWindowController {
 
     static func markCompleted() {
         UserDefaults.standard.set(true, forKey: completedKey)
+        applyDefaultLaunchAtLoginIfNeeded()
+    }
+
+    /// 首次完成 onboarding 时默认开启开机自启. sentinel 写入后再次调用是 no-op.
+    private static func applyDefaultLaunchAtLoginIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: launchAtLoginDefaultAppliedKey) else { return }
+        defaults.set(true, forKey: launchAtLoginDefaultAppliedKey)
+        _ = LaunchAtLoginManager.setEnabled(true)
     }
 
     static func show(force: Bool = false) {

@@ -20,7 +20,7 @@ final class DashboardPresenter: NSObject {
     private var globalClickMonitor: Any?
     private var localKeyMonitor: Any?
 
-    private static let firstUseHintShownKey = "ccpeek.firstUseHintShown"
+    static let firstUseHintShownKey = "ccpeek.firstUseHintShown"
     static let shortcutOpensAtMouseKey = "ccpeek.shortcutOpensAtMouse"
     private static let panelSize = NSSize(width: 400, height: 520)
 
@@ -47,11 +47,16 @@ final class DashboardPresenter: NSObject {
         let view = DashboardView(
             store: store,
             bridge: bridge,
+            hookMonitor: HookHealthMonitor.shared,
             onOpenSettings: { [weak self] in
                 self?.dismissAll()
                 SettingsWindowController.show()
             },
-            onQuit: { NSApp.terminate(nil) }
+            onQuit: { NSApp.terminate(nil) },
+            onFixHook: { [weak self] in
+                self?.dismissAll()
+                SettingsWindowController.show()
+            }
         )
         p.contentViewController = NSHostingController(rootView: view)
     }
@@ -140,12 +145,17 @@ final class DashboardPresenter: NSObject {
         let view = DashboardView(
             store: store,
             bridge: bridge,
+            hookMonitor: HookHealthMonitor.shared,
             showFirstUseHint: isFirstTime,
             onOpenSettings: { [weak self] in
                 self?.dismissAll()
                 SettingsWindowController.show()
             },
             onQuit: { NSApp.terminate(nil) },
+            onFixHook: { [weak self] in
+                self?.dismissAll()
+                SettingsWindowController.show()
+            },
             onDismissFirstUseHint: {
                 UserDefaults.standard.set(true, forKey: Self.firstUseHintShownKey)
             }

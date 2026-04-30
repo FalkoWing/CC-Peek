@@ -66,6 +66,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.pruneDead()
         startPruneTimer()
 
+        // Hook 健康检查 (启动 + 每 10 分钟). settings.json 被外部工具改坏时菜单栏出红点.
+        HookHealthMonitor.shared.start()
+
         // MacUI-2.5 Dashboard 多入口：监听 app 重新激活（Spotlight / Launchpad / open .app）
         NotificationCenter.default.addObserver(
             self,

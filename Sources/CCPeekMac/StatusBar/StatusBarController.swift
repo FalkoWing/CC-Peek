@@ -44,15 +44,20 @@ final class StatusBarController: NSObject {
         }
     }
 
-    /// 监听 store.processes + bridge.connectedPeerCount, 节流 1s 重绘 (PRD 3.5.2 重绘节流要求).
+    /// 监听 store.processes + bridge.connectedPeerCount + HookHealthMonitor.hasError,
+    /// 节流 1s 重绘 (PRD 3.5.2 重绘节流要求).
     /// 同时监听 App / 菜单栏按钮 appearance，深浅色切换时立即重绘。
     private func bindIconUpdates() {
-        Publishers.CombineLatest(store.$processes, bridge.$connectedPeerCount)
-            .throttle(for: .seconds(1), scheduler: RunLoop.main, latest: true)
-            .sink { [weak self] processes, peerCount in
-                self?.refreshIcon(processes: processes, peerCount: peerCount)
-            }
-            .store(in: &cancellables)
+        Publishers.CombineLatest3(
+            store.$processes,
+            bridge.$connectedPeerCount,
+            HookHealthMonitor.shared.$hasError
+        )
+        .throttle(for: .seconds(1), scheduler: RunLoop.main, latest: true)
+        .sink { [weak self] processes, peerCount, hookError in
+            self?.refreshIcon(processes: processes, peerCount: peerCount, hookError: hookError)
+        }
+        .store(in: &cancellables)
 
         appAppearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in
@@ -76,7 +81,11 @@ final class StatusBarController: NSObject {
     }
 
     private func refreshIcon() {
-        refreshIcon(processes: store.processes, peerCount: bridge.connectedPeerCount)
+        refreshIcon(
+            processes: store.processes,
+            peerCount: bridge.connectedPeerCount,
+            hookError: HookHealthMonitor.shared.hasError
+        )
     }
 
     private func refreshIconAfterStatusItemSettles() {
@@ -86,7 +95,7 @@ final class StatusBarController: NSObject {
         }
     }
 
-    private func refreshIcon(processes: [ClaudeProcess], peerCount: Int) {
+    private func refreshIcon(processes: [ClaudeProcess], peerCount: Int, hookError: Bool) {
         let count = processes.filter {
             $0.state == .waitingInput || $0.state == .waitingPermission
         }.count
@@ -96,7 +105,7 @@ final class StatusBarController: NSObject {
         let key = IconKey(
             waitingCount: count,
             hasConnectedPhone: peerCount > 0,
-            hasHookError: false,
+            hasHookError: hookError,
             isDark: isDark
         )
         guard key != lastIconKey else { return }
@@ -105,7 +114,7 @@ final class StatusBarController: NSObject {
         statusItem.button?.image = StatusIconBuilder.build(
             waitingCount: count,
             hasConnectedPhone: peerCount > 0,
-            hasHookError: false,  // MVP: 暂不接入 Hook 异常实时检测
+            hasHookError: hookError,
             appearance: buttonAppearance
         )
     }

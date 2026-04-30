@@ -222,6 +222,10 @@ struct OnboardingView: View {
             .buttonStyle(ChromeButtonStyle(kind: .secondary, horizontalPadding: 18, verticalPadding: 10))
             .keyboardShortcut(.defaultAction)
 
+            Text("完成后将开启开机自启 · 可在设置 → 通用关闭")
+                .font(Theme.ui(11))
+                .foregroundStyle(Theme.fgFaint)
+
             Spacer()
             pageDots(current: step.rawValue)
         }

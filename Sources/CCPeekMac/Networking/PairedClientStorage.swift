@@ -26,4 +26,8 @@ enum PairedClientStorage {
     static func contains(_ displayName: String) -> Bool {
         paired.contains(displayName)
     }
+
+    static func clearAll() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
 }

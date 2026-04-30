@@ -7,14 +7,15 @@ import CCPeekCore
 struct DashboardView: View {
     @ObservedObject var store: ProcessStateStore
     @ObservedObject var bridge: HostTransportBridge
+    @ObservedObject var hookMonitor: HookHealthMonitor
 
-    /// hook 错误状态 (MacUI-2 暂未接入实时检测，预留以便 MacUI-4 接通)
-    var hasHookError: Bool = false
     /// 独立 NSPanel 首次出现时显示快捷键引导 banner (MacUI-2.5)
     var showFirstUseHint: Bool = false
 
     var onOpenSettings: () -> Void = { SettingsWindowController.show() }
     var onQuit: () -> Void = { NSApp.terminate(nil) }
+    /// banner 点击 → 跳到设置页 hook 配置, 由用户走重装流程修复.
+    var onFixHook: () -> Void = {}
     /// 用户主动关掉 firstUseHint banner 时的回调（持久化已显示标志，下次唤起不再出）
     var onDismissFirstUseHint: () -> Void = {}
 
@@ -22,7 +23,7 @@ struct DashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if hasHookError {
+            if hookMonitor.hasError {
                 hookErrorBanner
                     .padding(.horizontal, 10)
                     .padding(.top, 10)
@@ -154,28 +155,32 @@ struct DashboardView: View {
     // MARK: - Banners
 
     private var hookErrorBanner: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "lock.slash")
-                .font(.system(size: 12, weight: .regular))
-                .foregroundStyle(Theme.statusPerm)
-            Text("Hook 配置已失效，点击修复")
-                .font(Theme.ui(12, weight: .regular))
-                .foregroundStyle(Theme.fg)
-            Spacer(minLength: 4)
-            Text("修复 →")
-                .font(Theme.ui(12, weight: .semibold))
-                .foregroundStyle(Theme.statusPerm)
+        Button(action: onFixHook) {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.slash")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(Theme.statusPerm)
+                Text("Hook 配置已失效，点击修复")
+                    .font(Theme.ui(12, weight: .regular))
+                    .foregroundStyle(Theme.fg)
+                Spacer(minLength: 4)
+                Text("修复 →")
+                    .font(Theme.ui(12, weight: .semibold))
+                    .foregroundStyle(Theme.statusPerm)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.oklch(0.30, 0.10, 25, alpha: 0.30))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color.oklch(0.55, 0.18, 25, alpha: 0.45), lineWidth: 1)
+            )
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.oklch(0.30, 0.10, 25, alpha: 0.30))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.oklch(0.55, 0.18, 25, alpha: 0.45), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
     }
 
     private var firstUseHintBanner: some View {
