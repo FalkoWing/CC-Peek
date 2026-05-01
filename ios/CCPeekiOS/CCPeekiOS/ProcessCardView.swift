@@ -8,6 +8,8 @@ import CCPeekCore
 struct ProcessCardView: View {
     let process: TransportMessage.SnapshotProcess
     let variant: CardVariant
+    /// 非 nil 时卡片显示"切换失败"错误态(覆盖 header label + 红色 topEdgeLine, 3s 后由调用方清除)
+    var switchError: String? = nil
     var onTap: ((String) -> Void)? = nil
 
     enum CardVariant {
@@ -37,7 +39,7 @@ struct ProcessCardView: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onTap?(process.id)
         } label: {
-            ProcessCardSurface(process: process, variant: variant)
+            ProcessCardSurface(process: process, variant: variant, switchError: switchError)
         }
         .buttonStyle(ProcessCardButtonStyle())
         .disabled(!process.switchable)
@@ -50,12 +52,16 @@ struct ProcessCardView: View {
 private struct ProcessCardSurface: View {
     let process: TransportMessage.SnapshotProcess
     let variant: ProcessCardView.CardVariant
+    let switchError: String?
 
     @Environment(\.cardIsPressed) private var isPressed: Bool
 
-    private var status: CardStatusStyle { CardStatusStyle.from(process.state) }
+    private var status: CardStatusStyle {
+        switchError != nil ? .errorStyle : CardStatusStyle.from(process.state)
+    }
     private var terminalDisplay: String { process.terminal ?? "—" }
-    private var isPerm: Bool { process.state == .waitingPermission }
+    /// 错误态期间不脉搏(避免抢占注意力), 错误显示完毕由 switchError 清空触发动画恢复.
+    private var isPerm: Bool { switchError == nil && process.state == .waitingPermission }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -70,6 +76,7 @@ private struct ProcessCardSurface: View {
         .modifier(CardOuterShadows(isPressed: isPressed))
         .modifier(BleedGlow(active: isPerm))
         .animation(.easeInOut(duration: 0.3), value: process.state)
+        .animation(.easeInOut(duration: 0.25), value: switchError != nil)
     }
 
     // MARK: Body 渐变 + 一圈 stroke 模拟 inset 高光/bevel/底部阴影
@@ -316,6 +323,13 @@ private struct CardStatusStyle {
                          edgeOpacity: 0.4)
         }
     }
+
+    static let errorStyle = CardStatusStyle(
+        label: "切换失败",
+        textColor: Color.oklch(0.78, 0.18, 25),
+        edgeColor: Color.oklch(0.78, 0.18, 25),
+        edgeOpacity: 0.95
+    )
 }
 
 // MARK: - 顶部状态色边线（静态 vs perm 脉搏；用 if/else 切换 view tree 让动画干净启停）

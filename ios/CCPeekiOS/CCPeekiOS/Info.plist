@@ -6,6 +6,9 @@
 	<array>
 		<string>_cc-peek-v1._tcp</string>
 		<string>_cc-peek-v1._udp</string>
+		<string>_ccpeek-permcheck._tcp</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>CC Peek 在同一 Wi-Fi 下发现并连接你的 Mac，所有进程状态数据仅在两台设备之间点对点传输，不会上传任何服务器。</string>
 </dict>
 </plist>

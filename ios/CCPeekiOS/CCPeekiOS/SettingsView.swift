@@ -8,6 +8,7 @@ import CCPeekCore
 struct SettingsView: View {
     @ObservedObject var client: PeekClient
     @ObservedObject var keepAwake: KeepAwakeManager
+    @ObservedObject var permissionMonitor: PermissionMonitor
     let onClose: () -> Void
 
     @State private var confirmUnpair = false
@@ -100,38 +101,74 @@ struct SettingsView: View {
                 SettingsRow(
                     leadingSystemImage: "wifi",
                     title: "本地网络",
-                    subtitle: "已授权"
-                ) {
-                    grantedPill
-                }
-                DottedDivider()
-                SettingsRow(
-                    leadingSystemImage: "dot.radiowaves.left.and.right",
-                    title: "蓝牙",
-                    subtitle: "已授权",
+                    subtitle: localNetworkSubtitle,
                     divider: false
                 ) {
-                    grantedPill
+                    if permissionMonitor.localNetwork == .denied {
+                        deniedActionButton
+                    } else {
+                        permissionPill(for: permissionMonitor.localNetwork)
+                    }
                 }
             }
         }
+        .onAppear { permissionMonitor.probeLocalNetwork() }
     }
 
-    private var grantedPill: some View {
-        HStack(spacing: 4) {
+    private var localNetworkSubtitle: String {
+        switch permissionMonitor.localNetwork {
+        case .granted: return "已授权"
+        case .denied: return "已拒绝 · 无法发现 Mac"
+        case .undetermined: return "检测中…"
+        }
+    }
+
+    @ViewBuilder
+    private func permissionPill(for status: PermissionMonitor.LocalNetworkStatus) -> some View {
+        switch status {
+        case .granted:
+            pillView(text: "已授权", hue: 150)
+        case .undetermined:
+            pillView(text: "检测中", hue: 240)
+        case .denied:
+            pillView(text: "已拒绝", hue: 25)
+        }
+    }
+
+    private func pillView(text: String, hue: Double) -> some View {
+        let baseColor = Color.oklch(0.78, 0.16, hue)
+        return HStack(spacing: 4) {
             Circle()
-                .fill(Theme.statusActive)
+                .fill(baseColor)
                 .frame(width: 6, height: 6)
-                .shadow(color: Theme.statusActiveGlow, radius: 2)
-            Text("已授权")
+                .shadow(color: baseColor.opacity(0.6), radius: 2)
+            Text(text)
                 .font(Theme.mono(10.5, weight: .medium))
                 .tracking(0.42)
         }
-        .foregroundStyle(Theme.statusActive)
+        .foregroundStyle(baseColor)
         .padding(.horizontal, 9)
         .padding(.vertical, 4)
-        .background(Capsule().fill(Color.oklch(0.30, 0.06, 150, alpha: 0.3)))
-        .overlay(Capsule().strokeBorder(Color.oklch(0.45, 0.10, 150, alpha: 0.4), lineWidth: 1))
+        .background(Capsule().fill(Color.oklch(0.30, 0.06, hue, alpha: 0.3)))
+        .overlay(Capsule().strokeBorder(Color.oklch(0.45, 0.10, hue, alpha: 0.4), lineWidth: 1))
+    }
+
+    private var deniedActionButton: some View {
+        Button(action: { permissionMonitor.openAppSettings() }) {
+            HStack(spacing: 4) {
+                Text("去设置")
+                    .font(Theme.mono(11, weight: .semibold))
+                    .tracking(0.42)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(Color.oklch(0.85, 0.14, 25))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.oklch(0.30, 0.10, 25, alpha: 0.4)))
+            .overlay(Capsule().strokeBorder(Color.oklch(0.55, 0.14, 25, alpha: 0.5), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: 显示
@@ -226,6 +263,7 @@ struct SettingsView: View {
     SettingsView(
         client: PeekClient(),
         keepAwake: KeepAwakeManager(),
+        permissionMonitor: PermissionMonitor(),
         onClose: {}
     )
 }

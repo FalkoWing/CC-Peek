@@ -200,7 +200,7 @@ struct OnboardingView: View {
                 Text("在 iPhone 上安装 CC Peek")
                     .font(Theme.ui(22, weight: .bold))
                     .foregroundStyle(Theme.fg)
-                Text("扫描下方二维码或在 App Store 搜索「CC Peek」下载 iOS 版本")
+                Text("iOS 版本即将上架 App Store。上架后此处会替换为可扫码下载的二维码")
                     .font(Theme.ui(13.5))
                     .lineSpacing(4)
                     .foregroundStyle(Theme.fgMuted)

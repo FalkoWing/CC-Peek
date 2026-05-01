@@ -23,6 +23,9 @@ final class PeekClient: ObservableObject {
     @Published private(set) var processes: [TransportMessage.SnapshotProcess] = []
     @Published private(set) var lastError: String?
     @Published private(set) var lastSwitchResult: TransportMessage.SwitchResult?
+    /// 最近一次 switch_to 失败的进程 → 错误消息. 卡片据此显示"切换失败"错误态,
+    /// 3s 后自动清除避免一直挡着.
+    @Published private(set) var switchErrors: [String: String] = [:]
     /// 上次 peer disconnect 的时间. 用于 PRD 3.3.5 的 "断开 ≤ 5 分钟保留最后已知状态" 分层判断.
     @Published private(set) var lastDisconnectedAt: Date?
 
@@ -34,6 +37,7 @@ final class PeekClient: ObservableObject {
     private let transport: MPCTransport
     private var currentPeer: TransportPeer?
     private var presenceTickTimer: AnyCancellable?
+    private var switchErrorClearTasks: [String: Task<Void, Never>] = [:]
 
     init() {
         let name = UIDevice.current.name
@@ -184,6 +188,23 @@ final class PeekClient: ObservableObject {
                 }
             case .switchResult(let result):
                 self.lastSwitchResult = result
+                self.switchErrorClearTasks[result.processId]?.cancel()
+                self.switchErrorClearTasks.removeValue(forKey: result.processId)
+                if result.success {
+                    self.switchErrors.removeValue(forKey: result.processId)
+                } else {
+                    let message = result.errorMessage ?? "切换失败"
+                    self.switchErrors[result.processId] = message
+                    let pid = result.processId
+                    self.switchErrorClearTasks[pid] = Task { [weak self] in
+                        try? await Task.sleep(for: .seconds(3))
+                        await MainActor.run {
+                            guard let self else { return }
+                            self.switchErrors.removeValue(forKey: pid)
+                            self.switchErrorClearTasks.removeValue(forKey: pid)
+                        }
+                    }
+                }
             case .unpairNotification:
                 // host 主动解除? 暂时同等处理: 清本地配对
                 self.unpair()

@@ -16,6 +16,8 @@ struct DashboardScreen: View {
     let onRefresh: () -> Void
     /// PRD 3.3.5 stale window: 非 nil 表示已断开但仍在 5 分钟内 → 显示进程列表(半透明) + 顶部 stale banner.
     let staleSince: Date?
+    /// 最近一次 switch_to 失败的进程 → 错误消息(传给 ProcessCardView 显示错误态)
+    var switchErrors: [String: String] = [:]
 
     @State private var currentPage = 0
 
@@ -77,7 +79,7 @@ struct DashboardScreen: View {
                     // PRD 3.6.6 下拉刷新: 每页套 ScrollView, refreshable 即使内容不溢出
                     // 也能识别下拉手势. minHeight 撑满避免 grid 顶部塌陷.
                     ScrollView {
-                        DashboardGrid(processes: pageProcs, orientation: orientation, onCardTap: onCardTap)
+                        DashboardGrid(processes: pageProcs, orientation: orientation, switchErrors: switchErrors, onCardTap: onCardTap)
                             .padding(.init(top: padY, leading: padX, bottom: padX, trailing: padX))
                             .frame(minHeight: geo.size.height)
                     }
@@ -103,6 +105,7 @@ private enum Orientation { case portrait, landscape }
 private struct DashboardGrid: View {
     let processes: [TransportMessage.SnapshotProcess]
     let orientation: Orientation
+    let switchErrors: [String: String]
     let onCardTap: (String) -> Void
 
     var body: some View {
@@ -116,7 +119,7 @@ private struct DashboardGrid: View {
                 HStack(spacing: 12) {
                     if rowIdx < chunks.count {
                         ForEach(chunks[rowIdx], id: \.id) { p in
-                            ProcessCardView(process: p, variant: variant, onTap: onCardTap)
+                            ProcessCardView(process: p, variant: variant, switchError: switchErrors[p.id], onTap: onCardTap)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .transition(.scale(scale: 0.85).combined(with: .opacity))
                         }
