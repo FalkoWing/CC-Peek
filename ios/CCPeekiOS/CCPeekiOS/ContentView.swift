@@ -71,7 +71,8 @@ private struct ContentRoot: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             // 演示模式跳过权限 banner: 演示用户没真在用本地网络发现, banner 没意义.
-            if !isDemoMode, permissionMonitor.localNetwork == .denied {
+            // 已连接时说明本地网络实际可用, 不显示探测误判产生的"无法发现 Mac".
+            if shouldShowPermissionBanner {
                 PermissionBanner(
                     title: "本地网络权限未授权,无法发现 Mac",
                     onOpenSettings: { permissionMonitor.openAppSettings() }
@@ -92,8 +93,18 @@ private struct ContentRoot: View {
             keepAwake.updateForScenePhase(phase)
             // 用户从系统设置回到 app, 重新探测一次 (可能刚改完授权).
             // 演示模式下不探测, 避免给用户弹本地网络权限弹窗.
-            if phase == .active, onboardingDone, !isDemoMode {
+            if phase == .active, shouldProbeLocalNetwork {
                 permissionMonitor.probeLocalNetwork()
+            }
+        }
+        .onChange(of: client.status) { _, status in
+            if case .connected = status {
+                permissionMonitor.noteLocalNetworkActivity()
+            }
+        }
+        .onChange(of: client.discoveredHosts.count) { _, count in
+            if count > 0 {
+                permissionMonitor.noteLocalNetworkActivity()
             }
         }
     }
@@ -116,7 +127,7 @@ private struct ContentRoot: View {
     /// 演示模式下不触发权限探测 (DemoTransport 不需要本地网络).
     private func startActiveSession() {
         client.start()
-        if !isDemoMode {
+        if shouldProbeLocalNetwork {
             permissionMonitor.probeLocalNetwork()
         }
     }
@@ -124,6 +135,14 @@ private struct ContentRoot: View {
     private var isConnected: Bool {
         if case .connected = client.status { return true }
         return false
+    }
+
+    private var shouldProbeLocalNetwork: Bool {
+        onboardingDone && !isDemoMode && !isConnected && client.discoveredHosts.isEmpty
+    }
+
+    private var shouldShowPermissionBanner: Bool {
+        !isDemoMode && !isConnected && permissionMonitor.localNetwork == .denied
     }
 
     /// PRD 3.3.5: 断开但仍在 5 分钟 stale window 内 → 返回 disconnect 时间 (UI 据此显示 stale banner).

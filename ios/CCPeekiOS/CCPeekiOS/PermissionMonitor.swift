@@ -90,6 +90,12 @@ final class PermissionMonitor: ObservableObject {
         UIApplication.shared.open(url)
     }
 
+    /// 业务层已经通过 Bonjour/MPC 发现或连接到 Mac.
+    /// 这比自建 listener/browser 探测更强, 可用来消除偶发的 denied 误判.
+    func noteLocalNetworkActivity() {
+        markGranted()
+    }
+
     private func markGranted() {
         guard localNetwork != .granted else { return }
         localNetwork = .granted
