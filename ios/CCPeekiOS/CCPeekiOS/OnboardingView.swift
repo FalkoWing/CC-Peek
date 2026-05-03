@@ -9,6 +9,7 @@ import UIKit
 
 struct OnboardingView: View {
     let onStart: () -> Void
+    let onDemoStart: () -> Void
 
     @State private var copyJustTapped = false
 
@@ -164,20 +165,30 @@ struct OnboardingView: View {
             }
             .buttonStyle(.plain)
 
-            // A5 演示模式: 待 DemoClient 实现接通,先 disabled 占位避免误导
-            Text("演示模式 · 即将上线")
-                .font(Theme.ui(13, weight: .medium))
-                .foregroundStyle(Theme.fgFaint)
+            // A5 演示模式: 走 DemoTransport 模拟一台已配对 Mac, UI 路径与真实端一致
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onDemoStart()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "play.circle")
+                        .font(.system(size: 13, weight: .medium))
+                    Text("演示模式")
+                        .font(Theme.ui(13, weight: .semibold))
+                }
+                .foregroundStyle(Theme.fg)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.oklch(0.22, 0.011, 250, alpha: 0.4))
+                        .fill(Color.oklch(0.22, 0.011, 250, alpha: 0.6))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Theme.cardHighlightSoft.opacity(0.5), lineWidth: 1)
+                        .strokeBorder(Theme.cardHighlightSoft, lineWidth: 1)
                 )
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 22)
         .padding(.top, 8)
@@ -213,5 +224,5 @@ enum OnboardingState {
 }
 
 #Preview {
-    OnboardingView(onStart: {})
+    OnboardingView(onStart: {}, onDemoStart: {})
 }

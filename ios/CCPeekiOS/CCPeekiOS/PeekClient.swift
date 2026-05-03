@@ -6,7 +6,12 @@ import CCPeekCore
 /// iOS-1b: 配对感知客户端.
 /// - 未配对: browse, 把发现的 host 暴露给 UI 让用户选, 选中后调 selectAndPair.
 /// - 已配对: browse, 一旦发现 displayName 匹配的 host 自动 invite.
+///
+/// A5 演示模式: 用 DemoTransport 替换真实 MPCTransport, 上层 UI 完全无感.
+/// invite 不在 Transport 协议上 (各 transport 实现细节差异大), 用 inviteHandler 闭包桥接.
 final class PeekClient: ObservableObject {
+
+    enum Mode { case real, demo }
 
     enum Status: Equatable {
         case idle
@@ -29,20 +34,36 @@ final class PeekClient: ObservableObject {
     /// 上次 peer disconnect 的时间. 用于 PRD 3.3.5 的 "断开 ≤ 5 分钟保留最后已知状态" 分层判断.
     @Published private(set) var lastDisconnectedAt: Date?
 
+    let isDemo: Bool
+
     var isPaired: Bool { pairedHostName != nil }
 
     /// PRD 3.3.5 stale window: 断开后保留最后已知状态展示的时长上限 (秒).
     static let staleWindow: TimeInterval = 300
 
-    private let transport: MPCTransport
+    private let transport: any Transport
+    private let inviteHandler: (TransportPeer) -> Void
     private var currentPeer: TransportPeer?
     private var presenceTickTimer: AnyCancellable?
     private var switchErrorClearTasks: [String: Task<Void, Never>] = [:]
 
-    init() {
-        let name = UIDevice.current.name
-        self.transport = MPCTransport(displayName: name, role: .client, autoInvite: false)
-        self.pairedHostName = PairedHostStorage.pairedHostName
+    init(mode: Mode = .real) {
+        switch mode {
+        case .real:
+            let name = UIDevice.current.name
+            let mpc = MPCTransport(displayName: name, role: .client, autoInvite: false)
+            self.transport = mpc
+            self.inviteHandler = { [weak mpc] peer in mpc?.invite(peer) }
+            self.pairedHostName = PairedHostStorage.pairedHostName
+            self.isDemo = false
+        case .demo:
+            let demo = DemoTransport()
+            self.transport = demo
+            // demo 在 start() 后自动走 discover→connected, 不需要 invite.
+            self.inviteHandler = { _ in }
+            self.pairedHostName = DemoTransport.demoMacName
+            self.isDemo = true
+        }
         wireCallbacks()
         startPresenceTicker()
     }
@@ -72,7 +93,7 @@ final class PeekClient: ObservableObject {
         PairedHostStorage.savePaired(host.displayName)
         pairedHostName = host.displayName
         status = .connecting(peer: host.displayName)
-        transport.invite(host)
+        inviteHandler(host)
     }
 
     /// 解除配对: 通知 host (best-effort) + 清本地 + 重启 transport.
@@ -133,7 +154,7 @@ final class PeekClient: ObservableObject {
             if let paired = self.pairedHostName, peer.displayName == paired, self.currentPeer == nil {
                 // 已配对 host 出现, 自动 invite
                 self.status = .connecting(peer: peer.displayName)
-                self.transport.invite(peer)
+                self.inviteHandler(peer)
             } else if self.pairedHostName == nil, self.currentPeer == nil {
                 self.status = .awaitingSelection
             }

@@ -63,7 +63,9 @@ final class PermissionMonitor: ObservableObject {
             using: NWParameters.tcp
         )
         browser.browseResultsChangedHandler = { [weak self] results, _ in
-            Task { @MainActor in
+            // Task 上重新声明 [weak self] 让 Swift 6 看清并发捕获语义,
+            // 避免"reference to captured var 'self' in concurrently-executing code"警告.
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 if !results.isEmpty { self.markGranted() }
             }

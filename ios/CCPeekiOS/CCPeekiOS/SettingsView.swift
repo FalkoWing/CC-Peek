@@ -12,6 +12,7 @@ struct SettingsView: View {
     let onClose: () -> Void
 
     @State private var confirmUnpair = false
+    @AppStorage("ccpeek.iosDemoMode") private var isDemoMode = false
 
     var body: some View {
         ZStack {
@@ -22,10 +23,15 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         pairedSection
-                        permissionsSection
+                        if !isDemoMode {
+                            permissionsSection
+                        }
                         displaySection
+                        demoSection
                         aboutSection
-                        unpairButton
+                        if !isDemoMode {
+                            unpairButton
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
@@ -82,6 +88,7 @@ struct SettingsView: View {
     }
 
     private var pairedSubtitle: String {
+        if client.isDemo { return "演示连接 · 模拟数据" }
         switch client.status {
         case .connected:           return "刚刚 · Wi-Fi"
         case .connecting:          return "正在连接…"
@@ -186,6 +193,41 @@ struct SettingsView: View {
                     IOSToggle(isOn: $keepAwake.enabled)
                 }
             }
+        }
+    }
+
+    // MARK: 演示模式
+
+    private var demoSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel("演示模式")
+            SurfaceCard {
+                SettingsRow(
+                    leadingSystemImage: "play.rectangle",
+                    title: "演示模式",
+                    subtitle: isDemoMode ? "正在使用模拟数据" : "用模拟数据体验界面",
+                    divider: false
+                ) {
+                    IOSToggle(isOn: Binding(
+                        get: { isDemoMode },
+                        set: { newValue in
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            isDemoMode = newValue
+                            // ContentView 顶层 .id(isDemoMode) 会触发整树重建.
+                            // 关 sheet 让重建过渡更干净 (sheet 上的 SettingsView 跟着 PeekClient 一起销毁).
+                            onClose()
+                        }
+                    ))
+                }
+            }
+            Text(isDemoMode
+                ? "关闭后回到真实配对状态。"
+                : "适合在 Mac 端没启动时试用界面,所有数据都是模拟的。")
+                .font(Theme.mono(11, weight: .regular))
+                .foregroundStyle(Theme.fgFaint)
+                .padding(.horizontal, 4)
+                .padding(.top, 6)
+                .padding(.bottom, 4)
         }
     }
 

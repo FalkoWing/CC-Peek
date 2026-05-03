@@ -1,8 +1,20 @@
 import SwiftUI
 import CCPeekCore
 
+/// 顶层路由: 监听演示模式开关, 切换时通过 .id() 让子树整树重建,
+/// @StateObject<PeekClient> 跟着重建从而切到对应 transport.
 struct ContentView: View {
-    @StateObject private var client = PeekClient()
+    @AppStorage("ccpeek.iosDemoMode") private var isDemoMode = false
+
+    var body: some View {
+        ContentRoot(isDemoMode: isDemoMode)
+            .id(isDemoMode)
+    }
+}
+
+private struct ContentRoot: View {
+    let isDemoMode: Bool
+    @StateObject private var client: PeekClient
     @StateObject private var keepAwake = KeepAwakeManager()
     @StateObject private var permissionMonitor = PermissionMonitor()
     @Environment(\.scenePhase) private var scenePhase
@@ -10,18 +22,27 @@ struct ContentView: View {
     @State private var showDeviceSwitcher = false
     @State private var onboardingDone = OnboardingState.completed
 
+    init(isDemoMode: Bool) {
+        self.isDemoMode = isDemoMode
+        _client = StateObject(wrappedValue: PeekClient(mode: isDemoMode ? .demo : .real))
+    }
+
     var body: some View {
         ZStack {
             Group {
                 if !onboardingDone {
-                    OnboardingView(onStart: completeOnboarding)
-                        .transition(.opacity)
+                    OnboardingView(
+                        onStart: completeOnboarding,
+                        onDemoStart: enterDemoFromOnboarding
+                    )
+                    .transition(.opacity)
                 } else if client.isPaired {
                     // 已配对: 沉浸式仪表盘，自带 TopBar/BottomBar (设计稿 dashboard.jsx)
                     DashboardScreen(
                         processes: client.processes,
                         macName: client.pairedHostName ?? "Mac",
                         isConnected: isConnected,
+                        isDemo: client.isDemo,
                         onSettingsTap: { showSettings = true },
                         onMacTap: { withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showDeviceSwitcher = true } },
                         onCardTap: { client.switchTo($0) },
@@ -49,7 +70,8 @@ struct ContentView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if permissionMonitor.localNetwork == .denied {
+            // 演示模式跳过权限 banner: 演示用户没真在用本地网络发现, banner 没意义.
+            if !isDemoMode, permissionMonitor.localNetwork == .denied {
                 PermissionBanner(
                     title: "本地网络权限未授权,无法发现 Mac",
                     onOpenSettings: { permissionMonitor.openAppSettings() }
@@ -68,8 +90,9 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             keepAwake.updateForScenePhase(phase)
-            // 用户从系统设置回到 app, 重新探测一次 (可能刚改完授权)
-            if phase == .active, onboardingDone {
+            // 用户从系统设置回到 app, 重新探测一次 (可能刚改完授权).
+            // 演示模式下不探测, 避免给用户弹本地网络权限弹窗.
+            if phase == .active, onboardingDone, !isDemoMode {
                 permissionMonitor.probeLocalNetwork()
             }
         }
@@ -81,11 +104,21 @@ struct ContentView: View {
         startActiveSession()
     }
 
+    /// 引导页 → 演示模式: 标 onboarding 完成 + 写 demoMode flag.
+    /// AppStorage 变化触发顶层 ContentView .id 重建, 自动用 PeekClient(.demo) 替换实例.
+    private func enterDemoFromOnboarding() {
+        OnboardingState.markCompleted()
+        UserDefaults.standard.set(true, forKey: "ccpeek.iosDemoMode")
+    }
+
     /// 引导完成或冷启动已完成引导时调用: 拉起 transport + 触发权限探测.
     /// 引导未完成时不调用,避免权限弹窗夹在引导页之前破坏首次体验.
+    /// 演示模式下不触发权限探测 (DemoTransport 不需要本地网络).
     private func startActiveSession() {
         client.start()
-        permissionMonitor.probeLocalNetwork()
+        if !isDemoMode {
+            permissionMonitor.probeLocalNetwork()
+        }
     }
 
     private var isConnected: Bool {

@@ -25,6 +25,7 @@ struct PairView: View {
                 pairChrome
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                demoFooter
             }
         }
         .preferredColorScheme(.dark)
@@ -33,6 +34,37 @@ struct PairView: View {
         .onChange(of: client.discoveredHosts.count) { _, count in
             if count > 0 { showEmpty = false }
         }
+    }
+
+    // MARK: 演示模式 footer (Mac 端没启动 / 模拟器 / 体验试用 时给一条出路)
+    // 三态(scanning / found / empty)统一展示, 样式低调不抢主流程焦点.
+
+    private var demoFooter: some View {
+        Button(action: enterDemoMode) {
+            HStack(spacing: 6) {
+                Image(systemName: "play.circle")
+                    .font(.system(size: 12, weight: .medium))
+                Text("先体验演示模式")
+                    .font(Theme.ui(12.5, weight: .medium))
+            }
+            .foregroundStyle(Theme.fgMuted)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule().fill(Color.oklch(0.20, 0.011, 250, alpha: 0.6))
+            )
+            .overlay(
+                Capsule().strokeBorder(Theme.cardHighlightSoft, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 18)
+        .padding(.top, 4)
+    }
+
+    private func enterDemoMode() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        UserDefaults.standard.set(true, forKey: "ccpeek.iosDemoMode")
     }
 
     // MARK: 顶部 chrome (设计稿 PairChrome)

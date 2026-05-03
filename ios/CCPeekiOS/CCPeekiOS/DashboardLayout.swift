@@ -9,6 +9,8 @@ struct DashboardScreen: View {
     let processes: [TransportMessage.SnapshotProcess]
     let macName: String
     let isConnected: Bool
+    /// A5 演示模式: TopBar 居中标题改为 "CC PEEK · DEMO" 紫色高亮, 用户随时一眼能识别.
+    var isDemo: Bool = false
     let onSettingsTap: () -> Void
     let onMacTap: () -> Void
     let onCardTap: (String) -> Void
@@ -35,6 +37,7 @@ struct DashboardScreen: View {
             VStack(spacing: 0) {
                 TopBar(macName: macName,
                        isConnected: isConnected,
+                       isDemo: isDemo,
                        onMacTap: onMacTap,
                        onSettingsTap: onSettingsTap)
 
@@ -160,6 +163,7 @@ private struct DashboardGrid: View {
 private struct TopBar: View {
     let macName: String
     let isConnected: Bool
+    let isDemo: Bool
     let onMacTap: () -> Void
     let onSettingsTap: () -> Void
 
@@ -179,11 +183,11 @@ private struct TopBar: View {
                 .buttonStyle(.plain)
             }
 
-            // 居中的 page-title "CC PEEK"
-            Text("CC PEEK")
+            // 居中的 page-title; 演示模式时改为紫色 "CC PEEK · DEMO" 加强视觉提示
+            Text(isDemo ? "CC PEEK · DEMO" : "CC PEEK")
                 .font(Theme.mono(11, weight: .regular))
                 .tracking(1.32)        // 0.12em @ 11pt
-                .foregroundStyle(Theme.fgFaint)
+                .foregroundStyle(isDemo ? Color.oklch(0.78, 0.16, 290) : Theme.fgFaint)
         }
         .padding(.horizontal, 18)
         .padding(.top, 14)
