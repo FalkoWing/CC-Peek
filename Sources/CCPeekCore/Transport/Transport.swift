@@ -67,3 +67,32 @@ public enum TransportRole: String, Sendable {
 public enum TransportServiceType {
     public static let mvp = "cc-peek-v1"
 }
+
+/// MPC invitation context 里的轻量配对凭证.
+/// displayName 只用于展示和查找, 自动重连必须额外校验这个随机 token.
+public enum TransportInvitationContext {
+    private struct Payload: Codable {
+        let version: Int
+        let pairingToken: String
+
+        enum CodingKeys: String, CodingKey {
+            case version
+            case pairingToken = "pairing_token"
+        }
+    }
+
+    public static func encode(pairingToken: String) -> Data? {
+        guard !pairingToken.isEmpty else { return nil }
+        return try? JSONEncoder().encode(Payload(version: 1, pairingToken: pairingToken))
+    }
+
+    public static func pairingToken(from data: Data?) -> String? {
+        guard let data,
+              let payload = try? JSONDecoder().decode(Payload.self, from: data),
+              payload.version == 1,
+              !payload.pairingToken.isEmpty else {
+            return nil
+        }
+        return payload.pairingToken
+    }
+}

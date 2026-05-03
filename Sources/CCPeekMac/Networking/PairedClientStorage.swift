@@ -5,29 +5,41 @@ import Foundation
 @MainActor
 enum PairedClientStorage {
     private static let key = "paired.client.displayNames"
+    private static let tokenKey = "paired.client.tokensByDisplayName"
 
     static var paired: Set<String> {
-        let arr = UserDefaults.standard.stringArray(forKey: key) ?? []
-        return Set(arr)
+        Set(tokensByDisplayName.keys)
     }
 
-    static func add(_ displayName: String) {
-        var current = paired
-        current.insert(displayName)
-        UserDefaults.standard.set(Array(current), forKey: key)
+    static func add(_ displayName: String, token: String) {
+        guard !displayName.isEmpty, !token.isEmpty else { return }
+        var current = tokensByDisplayName
+        current[displayName] = token
+        saveTokens(current)
     }
 
     static func remove(_ displayName: String) {
-        var current = paired
-        current.remove(displayName)
-        UserDefaults.standard.set(Array(current), forKey: key)
+        var current = tokensByDisplayName
+        current.removeValue(forKey: displayName)
+        saveTokens(current)
     }
 
-    static func contains(_ displayName: String) -> Bool {
-        paired.contains(displayName)
+    static func contains(_ displayName: String, token: String?) -> Bool {
+        guard let token, !token.isEmpty else { return false }
+        return tokensByDisplayName[displayName] == token
     }
 
     static func clearAll() {
         UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+    }
+
+    private static var tokensByDisplayName: [String: String] {
+        UserDefaults.standard.dictionary(forKey: tokenKey) as? [String: String] ?? [:]
+    }
+
+    private static func saveTokens(_ tokens: [String: String]) {
+        UserDefaults.standard.set(tokens, forKey: tokenKey)
+        UserDefaults.standard.set(Array(tokens.keys), forKey: key)
     }
 }

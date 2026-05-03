@@ -19,8 +19,8 @@ public final class MPCTransport: NSObject, Transport {
     public var onReceive: ((TransportMessage, TransportPeer) -> Void)?
 
     /// 收到邀请时的决策 hook. 默认接受所有邀请. 上层可设置为
-    /// 检查 peerID 是否在配对白名单. handler 必须调用一次 accept.
-    public var onInvitationReceived: ((TransportPeer, @escaping (Bool) -> Void) -> Void)?
+    /// 检查 peerID + invitation context 是否在配对白名单. handler 必须调用一次 accept.
+    public var onInvitationReceived: ((TransportPeer, Data?, @escaping (Bool) -> Void) -> Void)?
 
     public var connectedPeers: [TransportPeer] {
         session.connectedPeers.map(Self.peer)
@@ -81,9 +81,9 @@ public final class MPCTransport: NSObject, Transport {
 
     /// 上层手动邀请已发现的 peer (autoInvite=false 时用).
     /// 没找到对应 MCPeerID (没被发现 / 已 lost) 时静默无效.
-    public func invite(_ peer: TransportPeer) {
+    public func invite(_ peer: TransportPeer, context: Data? = nil) {
         guard let mc = discoveredMCPeers[peer.id], let browser else { return }
-        browser.invitePeer(mc, to: session, withContext: nil, timeout: 10)
+        browser.invitePeer(mc, to: session, withContext: context, timeout: 10)
     }
 
     public func start() {
@@ -268,7 +268,7 @@ extension MPCTransport: MCNearbyServiceAdvertiserDelegate {
         }
         DispatchQueue.main.async { [weak self] in
             if let hook = self?.onInvitationReceived {
-                hook(peer, accept)
+                hook(peer, context, accept)
             } else {
                 accept(true)
             }

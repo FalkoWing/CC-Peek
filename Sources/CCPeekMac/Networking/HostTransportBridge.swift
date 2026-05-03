@@ -41,7 +41,7 @@ final class HostTransportBridge: ObservableObject {
         transport.onReceive = { [weak self] message, peer in
             self?.handleIncoming(message, from: peer)
         }
-        transport.onInvitationReceived = { [weak self] peer, accept in
+        transport.onInvitationReceived = { [weak self] peer, context, accept in
             // MVP 1:1 (PRD 3.7.1): 已连一台时拒绝新邀请, 即使是已配对设备.
             // 拒绝即可, 不附 reason: MPC invitationHandler 不支持携带文本.
             if let connected = self?.transport.connectedPeers, !connected.isEmpty {
@@ -52,16 +52,23 @@ final class HostTransportBridge: ObservableObject {
                 accept(false)
                 return
             }
-            // 已配对: 静默接受. 未配对: 弹 NSAlert 询问用户.
-            if PairedClientStorage.contains(peer.displayName) {
+            let token = TransportInvitationContext.pairingToken(from: context)
+            // 已配对: 必须同时匹配 displayName + 随机 token 才静默接受.
+            if PairedClientStorage.contains(peer.displayName, token: token) {
                 DiagnosticLogger.info("transport", "auto-accept paired", context: ["peer": peer.displayName])
                 accept(true)
                 return
             }
             let trusted = HostTransportBridge.askUserToTrust(peer: peer)
             if trusted {
-                PairedClientStorage.add(peer.displayName)
-                DiagnosticLogger.info("transport", "user accepted pairing", context: ["peer": peer.displayName])
+                if let token {
+                    PairedClientStorage.add(peer.displayName, token: token)
+                    DiagnosticLogger.info("transport", "user accepted pairing", context: ["peer": peer.displayName])
+                } else {
+                    DiagnosticLogger.warn("transport", "user accepted uncredentialed one-shot connection", context: [
+                        "peer": peer.displayName,
+                    ])
+                }
             } else {
                 DiagnosticLogger.info("transport", "user rejected pairing", context: ["peer": peer.displayName])
             }

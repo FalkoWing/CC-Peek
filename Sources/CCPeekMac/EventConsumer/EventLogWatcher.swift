@@ -27,12 +27,7 @@ final class EventLogWatcher {
     }
 
     func stop() {
-        source?.cancel()
-        source = nil
-        if watchedFD >= 0 {
-            close(watchedFD)
-            watchedFD = -1
-        }
+        cancelWatcher()
         fallbackTimer?.cancel()
         fallbackTimer = nil
     }
@@ -63,30 +58,24 @@ final class EventLogWatcher {
             }
         }
 
-        src.setCancelHandler { [weak self] in
-            guard let self else { return }
-            Task { @MainActor in
-                if self.watchedFD >= 0 {
-                    close(self.watchedFD)
-                    self.watchedFD = -1
-                }
-            }
-        }
-
         source = src
         src.resume()
     }
 
     private func restart() {
+        cancelWatcher()
+        ensureMainFileExists()
+        setupWatcher()
+        processPending()
+    }
+
+    private func cancelWatcher() {
         source?.cancel()
         source = nil
         if watchedFD >= 0 {
             close(watchedFD)
             watchedFD = -1
         }
-        ensureMainFileExists()
-        setupWatcher()
-        processPending()
     }
 
     // MARK: - 兜底 timer (低频)

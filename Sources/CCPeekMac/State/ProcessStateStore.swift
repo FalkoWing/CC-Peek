@@ -140,8 +140,14 @@ final class ProcessStateStore: ObservableObject {
             }
             return String(last)
         }()
-        let sameBase = existing.values.filter { $0.cwd.flatMap(Self.basename) == base }.count
-        return sameBase == 0 ? base : "\(base) #\(sameBase + 1)"
+        let occupied = Set(existing.values.map(\.name))
+        if !occupied.contains(base) { return base }
+
+        var suffix = 2
+        while occupied.contains("\(base) #\(suffix)") {
+            suffix += 1
+        }
+        return "\(base) #\(suffix)"
     }
 
     private static func basename(_ path: String) -> String? {

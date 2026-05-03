@@ -42,8 +42,11 @@ final class PeekClient: ObservableObject {
     static let staleWindow: TimeInterval = 300
 
     private let transport: any Transport
-    private let inviteHandler: (TransportPeer) -> Void
+    private let inviteHandler: (TransportPeer, String?) -> Void
     private var currentPeer: TransportPeer?
+    private var pairedHostToken: String?
+    private var pendingPairing: (host: TransportPeer, token: String)?
+    private var pairingTimeoutTask: Task<Void, Never>?
     private var presenceTickTimer: AnyCancellable?
     private var switchErrorClearTasks: [String: Task<Void, Never>] = [:]
 
@@ -53,14 +56,19 @@ final class PeekClient: ObservableObject {
             let name = UIDevice.current.name
             let mpc = MPCTransport(displayName: name, role: .client, autoInvite: false)
             self.transport = mpc
-            self.inviteHandler = { [weak mpc] peer in mpc?.invite(peer) }
-            self.pairedHostName = PairedHostStorage.pairedHostName
+            self.inviteHandler = { [weak mpc] peer, token in
+                let context = token.flatMap { TransportInvitationContext.encode(pairingToken: $0) }
+                mpc?.invite(peer, context: context)
+            }
+            let pairedHost = PairedHostStorage.pairedHost
+            self.pairedHostName = pairedHost?.displayName
+            self.pairedHostToken = pairedHost?.token
             self.isDemo = false
         case .demo:
             let demo = DemoTransport()
             self.transport = demo
             // demo 在 start() 后自动走 discover→connected, 不需要 invite.
-            self.inviteHandler = { _ in }
+            self.inviteHandler = { _, _ in }
             self.pairedHostName = DemoTransport.demoMacName
             self.isDemo = true
         }
@@ -74,12 +82,17 @@ final class PeekClient: ObservableObject {
     }
 
     func stop() {
+        pairingTimeoutTask?.cancel()
+        pairingTimeoutTask = nil
         transport.stop()
         status = .idle
     }
 
     /// 用于"重新搜索"按钮: 重启 transport, 已配对状态下会自动重新邀请配对的 host
     func restart() {
+        pairingTimeoutTask?.cancel()
+        pairingTimeoutTask = nil
+        pendingPairing = nil
         transport.stop()
         discoveredHosts = []
         currentPeer = nil
@@ -88,12 +101,14 @@ final class PeekClient: ObservableObject {
         status = .browsing
     }
 
-    /// 未配对状态下用户从 device list 点击一个 host: 持久化 + 邀请.
+    /// 未配对状态下用户从 device list 点击一个 host: 生成临时 token + 邀请.
+    /// 只有 Mac 接受并真正连上后才持久化, 避免拒绝/超时时误进入已配对态.
     func selectAndPair(_ host: TransportPeer) {
-        PairedHostStorage.savePaired(host.displayName)
-        pairedHostName = host.displayName
+        let token = Self.makePairingToken()
+        pendingPairing = (host: host, token: token)
         status = .connecting(peer: host.displayName)
-        inviteHandler(host)
+        inviteHandler(host, token)
+        startPairingTimeout(for: host)
     }
 
     /// 解除配对: 通知 host (best-effort) + 清本地 + 重启 transport.
@@ -103,6 +118,10 @@ final class PeekClient: ObservableObject {
         }
         PairedHostStorage.clear()
         pairedHostName = nil
+        pairedHostToken = nil
+        pendingPairing = nil
+        pairingTimeoutTask?.cancel()
+        pairingTimeoutTask = nil
         currentPeer = nil
         processes = []
         lastSwitchResult = nil
@@ -145,6 +164,27 @@ final class PeekClient: ObservableObject {
             }
     }
 
+    private static func makePairingToken() -> String {
+        UUID().uuidString.replacingOccurrences(of: "-", with: "") +
+            UUID().uuidString.replacingOccurrences(of: "-", with: "")
+    }
+
+    private func startPairingTimeout(for host: TransportPeer) {
+        pairingTimeoutTask?.cancel()
+        pairingTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(12))
+            await MainActor.run {
+                guard let self,
+                      self.currentPeer == nil,
+                      self.pendingPairing?.host.id == host.id else { return }
+                self.pendingPairing = nil
+                self.status = self.discoveredHosts.isEmpty ? .browsing : .awaitingSelection
+                self.lastError = "配对未完成,请确认 Mac 端已接受邀请"
+                self.pairingTimeoutTask = nil
+            }
+        }
+    }
+
     private func wireCallbacks() {
         transport.onPeerDiscovered = { [weak self] peer in
             guard let self else { return }
@@ -154,7 +194,7 @@ final class PeekClient: ObservableObject {
             if let paired = self.pairedHostName, peer.displayName == paired, self.currentPeer == nil {
                 // 已配对 host 出现, 自动 invite
                 self.status = .connecting(peer: peer.displayName)
-                self.inviteHandler(peer)
+                self.inviteHandler(peer, self.pairedHostToken)
             } else if self.pairedHostName == nil, self.currentPeer == nil {
                 self.status = .awaitingSelection
             }
@@ -172,6 +212,14 @@ final class PeekClient: ObservableObject {
             guard let self else { return }
             self.currentPeer = peer
             self.lastDisconnectedAt = nil
+            if let pending = self.pendingPairing, pending.host.id == peer.id {
+                PairedHostStorage.savePaired(peer.displayName, token: pending.token)
+                self.pairedHostName = peer.displayName
+                self.pairedHostToken = pending.token
+                self.pendingPairing = nil
+                self.pairingTimeoutTask?.cancel()
+                self.pairingTimeoutTask = nil
+            }
             self.status = .connected(peer: peer.displayName)
             do {
                 try self.transport.send(.snapshotRequest, to: peer)
@@ -183,6 +231,15 @@ final class PeekClient: ObservableObject {
         transport.onPeerDisconnected = { [weak self] peer in
             guard let self else { return }
             if self.currentPeer?.id == peer.id { self.currentPeer = nil }
+            if self.pendingPairing?.host.id == peer.id {
+                self.pendingPairing = nil
+                self.pairingTimeoutTask?.cancel()
+                self.pairingTimeoutTask = nil
+            }
+            guard self.pairedHostName != nil else {
+                self.status = self.discoveredHosts.isEmpty ? .browsing : .awaitingSelection
+                return
+            }
             // PRD 3.3.5: 不清 processes, 让 UI 在 stale window 内继续展示最后已知状态.
             // 超出 stale window 由 ContentView 基于 lastDisconnectedAt 决策切到 offline 大屏.
             self.lastDisconnectedAt = Date()
