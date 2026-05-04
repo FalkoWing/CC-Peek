@@ -54,8 +54,9 @@ if let attrs = try? FileManager.default.attributesOfItem(atPath: mainPath),
 }
 
 // O_APPEND 原子写
-let fd = open(mainPath, O_WRONLY | O_APPEND | O_CREAT, 0o644)
+let fd = open(mainPath, O_WRONLY | O_APPEND | O_CREAT, 0o600)
 if fd >= 0 {
+    _ = fchmod(fd, 0o600)
     line.withUnsafeBytes { buf in
         _ = write(fd, buf.baseAddress, buf.count)
     }
@@ -65,7 +66,8 @@ if fd >= 0 {
 // Debug 日志
 if isDebug {
     let debugPath = AppPaths.hookDebugLog.path
-    if let dfd = Optional(open(debugPath, O_WRONLY | O_APPEND | O_CREAT, 0o644)), dfd >= 0 {
+    if let dfd = Optional(open(debugPath, O_WRONLY | O_APPEND | O_CREAT, 0o600)), dfd >= 0 {
+        _ = fchmod(dfd, 0o600)
         line.withUnsafeBytes { buf in
             _ = write(dfd, buf.baseAddress, buf.count)
         }
@@ -96,5 +98,7 @@ func truncateTail(path: String, keepBytes: Int) {
 
     let tmpPath = path + ".truncate.tmp"
     try? safeTail.write(to: URL(fileURLWithPath: tmpPath))
+    _ = chmod(tmpPath, 0o600)
     _ = rename(tmpPath, path)
+    _ = chmod(path, 0o600)
 }

@@ -96,7 +96,16 @@ final class EventLogWatcher {
     private func ensureMainFileExists() {
         let path = AppPaths.eventsLogFile.path
         if !FileManager.default.fileExists(atPath: path) {
-            FileManager.default.createFile(atPath: path, contents: nil)
+            FileManager.default.createFile(
+                atPath: path,
+                contents: nil,
+                attributes: [.posixPermissions: 0o600]
+            )
+        } else {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: path
+            )
         }
     }
 

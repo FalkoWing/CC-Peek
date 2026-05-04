@@ -108,12 +108,13 @@ public enum DiagnosticLogger {
             data.append(0x0A)
 
             let path = fileURL.path
-            let fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
+            let fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
             guard fd >= 0 else { return }
+            defer { close(fd) }
+            _ = fchmod(fd, 0o600)
             data.withUnsafeBytes { buf in
                 _ = Darwin.write(fd, buf.baseAddress, buf.count)
             }
-            close(fd)
         }
     }
 

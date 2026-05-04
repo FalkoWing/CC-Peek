@@ -27,7 +27,12 @@ public enum AppPaths {
         do {
             try FileManager.default.createDirectory(
                 at: appSupportDirectory,
-                withIntermediateDirectories: true
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o700],
+                ofItemAtPath: appSupportDirectory.path
             )
             return true
         } catch {

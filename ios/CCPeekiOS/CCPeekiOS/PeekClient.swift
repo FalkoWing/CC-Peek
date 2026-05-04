@@ -84,6 +84,7 @@ final class PeekClient: ObservableObject {
     func stop() {
         pairingTimeoutTask?.cancel()
         pairingTimeoutTask = nil
+        pendingPairing = nil
         transport.stop()
         status = .idle
     }
@@ -172,7 +173,12 @@ final class PeekClient: ObservableObject {
     private func startPairingTimeout(for host: TransportPeer) {
         pairingTimeoutTask?.cancel()
         pairingTimeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(12))
+            do {
+                try await Task.sleep(for: .seconds(12))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self,
                       self.currentPeer == nil,
