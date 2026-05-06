@@ -249,11 +249,23 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.fgDim)
                 }
                 DottedDivider()
-                SettingsRow(title: "本机", divider: false) {
+                SettingsRow(title: "本机") {
                     Text(UIDevice.current.name)
                         .font(Theme.mono(12, weight: .regular))
                         .foregroundStyle(Theme.fgDim)
                         .lineLimit(1)
+                }
+                DottedDivider()
+                SettingsRow(title: "隐私政策", divider: false) {
+                    Link(destination: URL(string: "https://ccpeek.com/privacy")!) {
+                        HStack(spacing: 4) {
+                            Text("查看")
+                                .font(Theme.mono(12, weight: .regular))
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(Theme.fgDim)
+                    }
                 }
             }
         }
