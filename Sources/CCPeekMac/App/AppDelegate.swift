@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         AppPaths.ensureAppSupportDirectory()
+        SoftwareUpdateController.shared.start()
 
         // M3.C: 启动 host transport. MPC 第一次广告会触发"本地网络"权限弹窗;
         // 拒绝后下次启动可在系统设置里恢复, 不阻塞菜单栏功能.

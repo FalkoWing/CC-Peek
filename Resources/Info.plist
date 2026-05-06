@@ -26,6 +26,12 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>SUEnableInstallerLauncherService</key>
+    <true/>
+    <key>SUFeedURL</key>
+    <string>https://ccpeek.com/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>l+VGLdbYuQyHAQxH8n7mwHoF9WRTx+tHwb40+AdozIs=</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>CC Peek 需要控制 Terminal/iTerm2 来切换到对应窗口或 tab。</string>
     <key>NSLocalNetworkUsageDescription</key>

@@ -28,6 +28,7 @@ let package = Package(
             dependencies: [
                 "CCPeekCore",
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
+                "Sparkle",
             ],
             path: "Sources/CCPeekMac"
         ),
@@ -35,6 +36,11 @@ let package = Package(
             name: "CCPeekMockClient",
             dependencies: ["CCPeekCore"],
             path: "Sources/CCPeekMockClient"
+        ),
+        .binaryTarget(
+            name: "Sparkle",
+            url: "https://github.com/sparkle-project/Sparkle/releases/download/2.9.1/Sparkle-for-Swift-Package-Manager.zip",
+            checksum: "9fec2b888e6e2940b1bfbd5d3d010b9f67076b52170923549095cbb74132403b"
         ),
     ]
 )

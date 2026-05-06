@@ -494,6 +494,7 @@ private struct GeneralDetail: View {
     @State private var shortcutAtMouse = UserDefaults.standard.bool(
         forKey: DashboardPresenter.shortcutOpensAtMouseKey
     )
+    @State private var automaticallyChecksForUpdates = SoftwareUpdateController.shared.automaticallyChecksForUpdates
     @State private var statusMessage: String?
 
     var body: some View {
@@ -549,14 +550,31 @@ private struct GeneralDetail: View {
                     SettingsRow(
                         leadingIcon: "arrow.down.circle",
                         title: "自动检查更新",
-                        subtitle: "暂未实现 (Sparkle 集成后置)",
-                        divider: false,
+                        subtitle: "定期检查 ccpeek.com/appcast.xml 是否有新版本",
+                        divider: true,
                         trailing: AnyView(
-                            Toggle("", isOn: .constant(false))
+                            Toggle("", isOn: Binding(
+                                get: { automaticallyChecksForUpdates },
+                                set: { newValue in
+                                    automaticallyChecksForUpdates = newValue
+                                    SoftwareUpdateController.shared.setAutomaticallyChecksForUpdates(newValue)
+                                }
+                            ))
                                 .labelsHidden()
                                 .toggleStyle(.switch)
-                                .disabled(true)
-                                .opacity(0.5)
+                        )
+                    )
+                    SettingsRow(
+                        leadingIcon: "arrow.triangle.2.circlepath",
+                        title: "检查更新",
+                        subtitle: "立即检查是否有可用的新版本",
+                        divider: false,
+                        trailing: AnyView(
+                            Button("检查") {
+                                SoftwareUpdateController.shared.checkForUpdates()
+                            }
+                            .disabled(!SoftwareUpdateController.shared.canCheckForUpdates)
+                            .controlSize(.small)
                         )
                     )
                 }
@@ -575,6 +593,9 @@ private struct GeneralDetail: View {
                     .foregroundStyle(Theme.fgDim)
                     .padding(.horizontal, 4)
             }
+        }
+        .onAppear {
+            automaticallyChecksForUpdates = SoftwareUpdateController.shared.automaticallyChecksForUpdates
         }
     }
 
@@ -619,6 +640,16 @@ private struct AboutDetail: View {
                         divider: true,
                         trailing: AnyView(
                             Button("查看") { DiagnosticLogWindowController.show() }
+                                .controlSize(.small)
+                        )
+                    )
+                    SettingsRow(
+                        leadingIcon: "exclamationmark.bubble",
+                        title: "反馈",
+                        subtitle: "复制诊断信息到剪贴板, 并在 Finder 标出最近一份崩溃日志",
+                        divider: true,
+                        trailing: AnyView(
+                            Button("反馈") { FeedbackComposer.presentFeedback() }
                                 .controlSize(.small)
                         )
                     )

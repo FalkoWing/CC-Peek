@@ -6,5 +6,12 @@
     <false/>
     <key>com.apple.security.automation.apple-events</key>
     <true/>
+    <!-- Sparkle 集成: hardened runtime 下加载 Sparkle.framework 主 dylib 时,
+         dyld 走 library validation 要求 framework 的 Team ID 与主 app 一致.
+         adhoc 签名下两边 Team ID 都是 "not set" 但 dyld 仍会拒绝跨 codesign
+         调用的 dylib (cdhash 不关联). Developer ID 模式下 Team ID 一致, 这条
+         entitlement 不起作用. 加上让 dev 与 prod 行为统一. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
 </dict>
 </plist>
