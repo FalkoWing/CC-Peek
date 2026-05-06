@@ -145,6 +145,15 @@ for spm_bundle in "$APP/Contents/Resources/"*.bundle; do
         "$spm_bundle"
 done
 
+# Contents/MacOS/ 下的非主可执行文件 (CCPeekHook 等) 不会被 codesign 签 .app
+# 时自动签到, 必须单独签. 否则 Apple 公证会以
+# "binary is not signed with a valid Developer ID / no hardened runtime /
+# no secure timestamp" 拒绝整个 archive.
+echo "==> 签 CCPeekHook (独立可执行)"
+codesign "${codesign_common[@]}" \
+    --sign "$SIGN_IDENTITY" \
+    "$APP/Contents/MacOS/CCPeekHook"
+
 echo "==> 签主 app"
 codesign "${codesign_common[@]}" \
     --sign "$SIGN_IDENTITY" \
