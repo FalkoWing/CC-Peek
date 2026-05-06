@@ -761,7 +761,7 @@ private struct UninstallInstructionsSheet: View {
             1. 在「设置 → 危险操作」中点击「清理配置信息」，移除 settings.json 中的 Hook 条目和应用数据。
             2. 退出 CC Peek（菜单栏图标 → 退出）。
             3. 将 /Applications/CCPeek.app 拖到废纸篓。
-            4. 如已开启开机自启，删除 ~/Library/LaunchAgents/me.lifawei.ccpeek.agent.plist。
+            4. 如已开启开机自启，删除 ~/Library/LaunchAgents/com.ccpeek.mac.agent.plist。
             """)
                 .font(Theme.ui(12))
                 .foregroundStyle(Theme.fgMuted)

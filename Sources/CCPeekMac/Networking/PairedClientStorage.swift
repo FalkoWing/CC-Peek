@@ -6,7 +6,7 @@ import Security
 enum PairedClientStorage {
     private static let key = "paired.client.displayNames"
     private static let legacyTokenKey = "paired.client.tokensByDisplayName"
-    private static let keychainService = "me.lifawei.ccpeek.paired-clients"
+    private static let keychainService = "com.ccpeek.mac.paired-clients"
 
     static var paired: Set<String> {
         migrateLegacyTokensIfNeeded()

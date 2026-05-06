@@ -95,7 +95,7 @@ public enum DiagnosticLogger {
 
     // MARK: - private
 
-    private static let queue = DispatchQueue(label: "me.lifawei.ccpeek.diagnostic")
+    private static let queue = DispatchQueue(label: "com.ccpeek.mac.diagnostic")
 
     private static func write(_ entry: Entry) {
         queue.sync {

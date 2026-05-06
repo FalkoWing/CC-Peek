@@ -11,7 +11,7 @@ final class EventLogWatcher {
     private var source: DispatchSourceFileSystemObject?
     private var watchedFD: Int32 = -1
     private var fallbackTimer: DispatchSourceTimer?
-    private let queue = DispatchQueue(label: "me.lifawei.ccpeek.eventwatcher")
+    private let queue = DispatchQueue(label: "com.ccpeek.mac.eventwatcher")
 
     init(store: ProcessStateStore) {
         self.store = store

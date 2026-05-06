@@ -8,7 +8,8 @@ import ServiceManagement
 /// 由 launchd 在登录时启动. 这种方式不依赖签名等级, 跨 macOS 版本稳定.
 @MainActor
 enum LaunchAtLoginManager {
-    private static let agentLabel = "me.lifawei.ccpeek.agent"
+    private static let agentLabel = "com.ccpeek.mac.agent"
+    private static let legacyAgentLabels = ["me.lifawei.ccpeek.agent"]
 
     /// 当前实际生效的实现方式. UI 用来显示"用什么方式管的"
     enum Backend: String {
@@ -80,14 +81,23 @@ enum LaunchAtLoginManager {
     // MARK: - LaunchAgent backend
 
     private static var launchAgentURL: URL {
+        launchAgentURL(for: agentLabel)
+    }
+
+    private static func launchAgentURL(for label: String) -> URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home
             .appendingPathComponent("Library/LaunchAgents")
-            .appendingPathComponent("\(agentLabel).plist")
+            .appendingPathComponent("\(label).plist")
     }
 
     private static func launchAgentPlistExists() -> Bool {
-        FileManager.default.fileExists(atPath: launchAgentURL.path)
+        if FileManager.default.fileExists(atPath: launchAgentURL.path) {
+            return true
+        }
+        return legacyAgentLabels.contains {
+            FileManager.default.fileExists(atPath: launchAgentURL(for: $0).path)
+        }
     }
 
     private static func appExecutablePath() -> String {
@@ -95,6 +105,7 @@ enum LaunchAtLoginManager {
     }
 
     private static func installLaunchAgent() -> Result<Void, Error> {
+        removeLegacyLaunchAgents()
         let plist: [String: Any] = [
             "Label": agentLabel,
             "ProgramArguments": [appExecutablePath()],
@@ -123,6 +134,7 @@ enum LaunchAtLoginManager {
     }
 
     private static func removeLaunchAgent() -> Result<Void, Error> {
+        removeLegacyLaunchAgents()
         let url = launchAgentURL
         guard FileManager.default.fileExists(atPath: url.path) else {
             return .success(())
@@ -132,6 +144,15 @@ enum LaunchAtLoginManager {
             return .success(())
         } catch {
             return .failure(error)
+        }
+    }
+
+    private static func removeLegacyLaunchAgents() {
+        for label in legacyAgentLabels {
+            let url = launchAgentURL(for: label)
+            if FileManager.default.fileExists(atPath: url.path) {
+                try? FileManager.default.removeItem(at: url)
+            }
         }
     }
 }

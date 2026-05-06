@@ -1,11 +1,12 @@
 #!/bin/bash
-# 把 swift build 产物包装成 CC Peek.app, 含 hook 二进制 + Info.plist + adhoc 签名
+# 把 swift build 产物包装成 CC Peek.app, 含 hook 二进制 + Info.plist + 签名.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 CONFIG="${CONFIG:-release}"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 # 文件名无空格规避 hook 路径含空格的命令解析风险.
 # 显示名 "CC Peek" 由 Info.plist CFBundleDisplayName 决定.
 APP="$ROOT/build/CCPeek.app"
@@ -81,15 +82,20 @@ while IFS= read -r bundle; do
     resource_index=$((resource_index + 1))
 done < <(find -L "$BIN_DIR" -maxdepth 1 -name "*.bundle" -type d | sort)
 
-echo "==> adhoc 签名 (开发期足够; 发布前用 Developer ID 替换)"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+    echo "==> adhoc 签名 (开发期)"
+else
+    echo "==> Developer ID 签名: $SIGN_IDENTITY"
+fi
 codesign --force --deep --options runtime \
-    --sign - \
+    --sign "$SIGN_IDENTITY" \
     --entitlements Resources/CCPeek.entitlements \
     "$APP"
 
 echo "==> 验证"
 codesign --verify --deep --strict --verbose=4 "$APP"
-codesign -dv "$APP" 2>&1 | head -5
+codesign_info="$(codesign -dv "$APP" 2>&1 || true)"
+printf "%s\n" "$codesign_info" | sed -n '1,5p'
 
 echo ""
 echo "==> 注册到 Launch Services (让 SMAppService 能识别)"

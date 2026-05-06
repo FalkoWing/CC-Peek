@@ -183,7 +183,7 @@ CCPEEK_MOCK_NAME=DemoPhone swift run CCPeekMockClient
 重新触发首次引导：
 
 ```bash
-defaults delete me.lifawei.ccpeek ccpeek.onboardingCompleted
+defaults delete com.ccpeek.mac ccpeek.onboardingCompleted
 open /Applications/CCPeek.app
 ```
 

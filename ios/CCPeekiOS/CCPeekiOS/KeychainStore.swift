@@ -3,7 +3,7 @@ import Security
 
 /// iOS 端简易 Keychain 包装. service 命名空间隔离 cc-peek 自己的 key.
 enum KeychainStore {
-    static let service = "com.ccpeek.CCPeekiOS"
+    static let service = "com.ccpeek.ios"
 
     static func setString(_ value: String, for key: String) {
         guard let data = value.data(using: .utf8) else { return }

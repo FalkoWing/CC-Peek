@@ -99,7 +99,7 @@ drawText(
 )
 
 drawText(
-    "安装后打开 CC Peek。如果 macOS 提示无法验证开发者，请到 系统设置 > 隐私与安全性，往下滑找到 CC Peek，点击“仍要打开”。",
+    "安装后打开 CC Peek。首次启动会引导你配置 Claude Code Hook 和必要的系统权限。",
     at: NSPoint(x: 90, y: 36),
     font: .systemFont(ofSize: 14, weight: .regular),
     color: NSColor(calibratedRed: 0.23, green: 0.28, blue: 0.31, alpha: 1),
