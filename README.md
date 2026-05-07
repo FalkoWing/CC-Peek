@@ -1,32 +1,37 @@
 # CC Peek
 
-CC Peek 是一个给 Claude Code 使用者准备的「桌面第二屏」工具。它把本机多个 Claude Code 进程的状态同步到 iPhone，并允许从手机上一键切回对应的终端窗口。
+CC Peek 把本机多个 Claude Code 进程的状态实时同步到一台 iPhone，并允许从手机一键切回到对应的终端窗口。它把 "需要审批 / 等待输入 / 已完成" 这类信号从主屏幕里搬到旁边的常驻第二屏，减少主屏的注意力切换。
 
-这个项目面向使用第三方 API / API 代理运行 Claude Code 的场景。它不依赖 claude.ai 官方 Remote Control，也不做远程跨网访问；核心使用方式是在电脑旁边放一台 iPhone，把进程状态从主屏幕里移出来。
+项目面向使用第三方 API / API 代理运行 Claude Code 的场景，不依赖 claude.ai 官方 Remote Control，不做远程跨网访问。Mac 与 iPhone 通过 Apple MultipeerConnectivity 在同一近场网络通信。
 
 ## 当前状态
 
-项目已经实现 macOS 菜单栏 host、Claude Code hook、本地事件消费、终端窗口切换、MultipeerConnectivity 近场通信、iOS 端配对与 Dashboard UI。
+- **v1.0 已发布（2026-05-07）**
+  - macOS：`CCPeek.app` 通过 [`ccpeek.com/download`](https://ccpeek.com/download) 分发，Developer ID 签名 + 公证 + Sparkle 自动更新。
+  - iOS：`CC Peek` 已上架 App Store，Bundle ID `com.ccpeek.ios`。
+- **后续迭代**：见 [`PRD.md`](./PRD.md) 与 [`PROGRESS.md`](./PROGRESS.md)。
+- **v1.0 历史档案**：[`docs/PRD-v1.0.md`](./docs/PRD-v1.0.md) + [`docs/PROGRESS-v1.0.md`](./docs/PROGRESS-v1.0.md)。
 
-已验证的主链路：
+主链路（已在真机验证）：
 
 1. Claude Code 触发 hook 事件。
 2. `CCPeekHook` 写入本地 `events.jsonl`。
-3. macOS 菜单栏 app 消费事件并更新进程状态。
-4. macOS host 通过 MPC 将状态推送到 iPhone。
-5. iPhone 点击进程卡片后，macOS 端切换到对应终端窗口。
-
-更细的进度记录见 [PROGRESS.md](./PROGRESS.md)，产品需求见 [cc-peek-PRD-v0.4.md](./cc-peek-PRD-v0.4.md)。
+3. macOS 菜单栏 app 消费事件，更新进程状态机。
+4. macOS host 通过 MultipeerConnectivity 把状态推送到 iPhone。
+5. iPhone 点击进程卡片，Mac 端切回对应终端窗口。
 
 ## 功能概览
 
-- 采集 Claude Code 的 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`Notification`、`Stop`、`SessionEnd` 等 hook 事件。
-- 识别进程状态：`active`、`waiting_input`、`waiting_permission`、`completed`、`unknown`。
-- macOS 菜单栏显示进程状态与徽章数量。
-- iPhone 端显示实时进程卡片、离线 stale 状态、下拉刷新、配对设置与常亮控制。
-- 支持 iPhone 到 Mac 的 1:1 配对与白名单。
-- 支持从 iPhone 发起 `switch_to`，Mac 端切到 Terminal.app / iTerm2 对应 tab；其他终端按能力降级为激活应用。
-- 提供 mock iPhone CLI，用于无真机时验证 MPC 协议。
+- 采集 Claude Code 的 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`Notification`、`Stop`、`SessionEnd` 6 类 hook 事件。
+- 识别进程状态：`active` / `waiting_input` / `waiting_permission` / `completed` / `unknown`。
+- macOS 菜单栏图标显示进程总数与连接状态，Hook 异常时显示红点。
+- macOS Dashboard popover / 全局快捷键 / 独立 Panel（菜单栏图标被遮挡时兜底）。
+- iPhone 端：实时进程卡片、横竖屏自适应、屏幕常亮、stale 5 分钟分层、下拉刷新。
+- iPhone 与 Mac 1:1 配对 + 白名单（基于 displayName，Keychain 持久化）。
+- 终端切换：Terminal.app / iTerm2 按 tty 切到具体 tab；Ghostty / Warp / VS Code 等降级为激活应用。
+- 演示模式：iOS 端不依赖 Mac 也可体验完整 UI（4 个进程、状态切换、卡片增删动画）。
+- Sparkle 自动更新（Mac 端）+ 反馈通道（设置页一键复制日志摘要 → `mailto:`）。
+- Mock client：CLI 工具用于无真机时验证 MPC 协议。
 
 ## 架构
 
@@ -36,7 +41,7 @@ flowchart LR
     Hook --> Events["~/Library/Application Support/cc-peek/events.jsonl"]
     Events --> Mac["CCPeekMac menu bar app"]
     Mac --> Store["ProcessStateStore"]
-    Store --> UI["macOS popover"]
+    Store --> UI["macOS popover / panel"]
     Store --> Bridge["HostTransportBridge"]
     Bridge <-->|MPC / Bonjour| IOS["CCPeekiOS"]
     IOS --> Switch["switch_to"]
@@ -44,7 +49,7 @@ flowchart LR
     Bridge --> Terminal["TerminalSwitcher"]
 ```
 
-Hook 采用原生 Swift 二进制，避免依赖用户 shell、Node、Python 等环境。Mac 与 iPhone 间通信使用 Apple 的 MultipeerConnectivity，service type 为 `cc-peek-v1`。
+Hook 是原生 Swift 单文件二进制，避免依赖用户 shell / Node / Python 等环境。Mac 与 iPhone 通信走 MultipeerConnectivity，service type `cc-peek-v1`，强制 TLS。
 
 ## 工程结构
 
@@ -56,38 +61,47 @@ Hook 采用原生 Swift 二进制，避免依赖用户 shell、Node、Python 等
 │   ├── CCPeekHook          # Claude Code hook 二进制
 │   ├── CCPeekMac           # macOS 菜单栏 app
 │   └── CCPeekMockClient    # mock iPhone CLI
-├── ios/CCPeekiOS           # iOS SwiftUI app / Xcode project
+├── ios/CCPeekiOS           # iOS SwiftUI app（Xcode project）
 ├── Resources               # macOS app Info.plist 与 entitlements
-├── scripts/build-app.sh    # 打包 build/CCPeek.app
-├── cc-peek-PRD-v0.4.md     # 当前 PRD
-└── PROGRESS.md             # 开发进度与已知限制
+├── scripts
+│   ├── build-app.sh                     # 出 build/CCPeek.app
+│   ├── build-dmg.sh                     # 出 build/CCPeek.dmg
+│   ├── build-release.sh                 # Developer ID 签名 + 公证 + DMG 全流程
+│   ├── generate-app-store-assets.mjs    # 截图/icon 复用生成
+│   └── render-review-demo-video.swift   # App Store 审核演示视频生成
+├── website                 # ccpeek.com 静态站点（着陆页 / 隐私 / appcast）
+├── app-store-assets        # iOS 上架资产（icon / 截图 / metadata / 审核视频）
+├── docs                    # v1.0 封版文档
+├── PRD.md                  # 活文档（v1.1+）
+└── PROGRESS.md             # 活文档（v1.1+）
 ```
 
-## 环境要求
+## 安装（终端用户）
+
+最简单的方式：
+
+- **Mac**：从 [`ccpeek.com/download`](https://ccpeek.com/download) 下载 DMG，拖入 Applications，首次打开按引导装 hook。
+- **iPhone**：在 App Store 搜索 "CC Peek" 安装。
+
+如果想自己从源码构建，看下面"开发"段。
+
+## 开发
+
+### 环境
 
 - macOS 14+。
 - Swift 5.9+。
-- Xcode，用于构建和真机运行 iOS app。
-- Claude Code，并允许写入 `~/.claude/settings.json`。
-- iPhone 与 Mac 在同一近场网络环境下，并允许本地网络权限。
+- Xcode（运行 iOS app）。
+- Claude Code 已安装，且允许写 `~/.claude/settings.json`。
+- iPhone 与 Mac 同一近场网络，已授权"本地网络"权限。
 
-## 构建 macOS App
+### 构建 macOS App
 
 ```bash
 ./scripts/build-app.sh
 ```
 
-脚本会执行 release 构建，生成：
-
-```text
-build/CCPeek.app
-```
-
-直接运行：
-
-```bash
-open build/CCPeek.app
-```
+输出 `build/CCPeek.app`，使用 adhoc 签名，可直接 `open`。
 
 安装到 `/Applications`：
 
@@ -97,128 +111,94 @@ ditto build/CCPeek.app /Applications/CCPeek.app
 open /Applications/CCPeek.app
 ```
 
-生成可分享的拖拽安装 DMG：
+构建可分享 DMG（仍是 adhoc 签名，仅自用）：
 
 ```bash
 ./scripts/build-dmg.sh
 ```
 
-脚本会生成：
+构建正式发布包（Developer ID 签名 + 公证 + DMG 公证）：
 
-```text
-build/CCPeek.dmg
+```bash
+SIGN_IDENTITY="Developer ID Application: <your name> (<TEAMID>)" \
+NOTARY_PROFILE="ccpeek-notary" \
+APP_NOTARY_ID="<apple id>" \
+./scripts/build-release.sh
 ```
 
-打开 DMG 后，窗口左侧是 `CCPeek.app`，右侧是 `Applications` 文件夹。用户把 app 拖到 `Applications` 即可完成安装。背景图里也包含 Gatekeeper 提示：如果打开时报“无法验证开发者”，到“系统设置 > 隐私与安全性”往下滑找到 CC Peek，然后点击“仍要打开”。
+`NOTARY_PROFILE` 指向 `xcrun notarytool store-credentials` 保存的 keychain profile。
 
-开发期脚本使用 adhoc 签名。正式分发前需要替换为 Developer ID 签名与完整发布流程。
+### 安装 / 卸载 Hook
 
-## 安装 Claude Code Hook
-
-首次打开 macOS app 会进入引导流程，也可以直接用命令安装 hook：
+首次打开 Mac app 会进引导流程。命令行也可：
 
 ```bash
 "/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --install-hook
-```
-
-安装行为：
-
-- 修改 `~/.claude/settings.json`。
-- 为 6 类 Claude Code hook 事件追加 CC Peek 命令。
-- 写入前会备份已有 `settings.json`。
-- hook 命令指向 app bundle 内的 `CCPeekHook`。
-
-卸载 hook：
-
-```bash
 "/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --uninstall-hook
-```
-
-查看 hook 二进制路径：
-
-```bash
 "/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --print-hook-path
 ```
 
-## 运行 iOS App
+`--install-hook` 会修改 `~/.claude/settings.json`，写入前自动备份为 `settings.json.ccpeek-backup-<ts>`。
 
-1. 打开 Xcode project：
+### 运行 iOS App
 
-   ```bash
-   open ios/CCPeekiOS/CCPeekiOS.xcodeproj
-   ```
+```bash
+open ios/CCPeekiOS/CCPeekiOS.xcodeproj
+```
 
-2. 在 Xcode 中选择开发团队与真机。
-3. 运行 `CCPeekiOS` target。
-4. 确保 Mac 端 `CCPeek.app` 正在运行。
-5. iPhone 端发现 Mac 后点击配对。
-6. Mac 端弹出信任确认后选择信任。
+在 Xcode 选开发团队 + 真机，跑 `CCPeekiOS` target。Mac 端 `CCPeek.app` 同时运行后，iPhone 端会自动发现 Mac，点击 → Mac 弹信任确认 → 配对完成。
 
-配对完成后，iPhone 会自动请求 snapshot，并持续接收状态变化。解除配对会通过 `unpair_notification` 尽力同步到 Mac 端。
+未配对状态下也可以走"演示模式"体验完整 UI。
 
-## Mock Client
+### Mock Client
 
-没有 iPhone 真机时，可以用 mock client 验证 Mac host 的 MPC 链路：
+无真机时验证 MPC：
 
 ```bash
 swift run CCPeekMockClient
-```
+# 命令: snapshot | switch <process_id> | quit
 
-启动后支持命令：
-
-```text
-snapshot
-switch <process_id>
-quit
-```
-
-如果要区分多个 mock 设备，可以设置显示名：
-
-```bash
+# 多设备区分
 CCPEEK_MOCK_NAME=DemoPhone swift run CCPeekMockClient
 ```
 
-## 常用调试命令
-
-重新触发首次引导：
+### 调试
 
 ```bash
+# 重新触发首次引导（清 onboarding flag）
 defaults delete com.ccpeek.mac ccpeek.onboardingCompleted
 open /Applications/CCPeek.app
-```
 
-调试某个 PID 的父进程链和 tty：
-
-```bash
+# 查看某个 PID 的父进程链与 tty 解析
 "/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --debug-tree <pid>
-```
 
-开启 hook debug 日志：在启动 Claude Code 前，让它继承这个环境变量。
-
-```bash
+# 开启 hook debug 日志（在跑 Claude Code 的 shell 内）
 export CC_PEEK_DEBUG=1
 ```
 
-主要运行数据路径：
+主要数据路径：
 
 ```text
 ~/Library/Application Support/cc-peek/events.jsonl
 ~/Library/Application Support/cc-peek/hook.debug.log
+~/.claude/settings.json
+~/Library/LaunchAgents/com.ccpeek.mac.agent.plist
 ```
 
 ## 已知限制
 
-- 当前 MVP 是 Mac 与 iPhone 1:1 配对；多 Mac / 多 iPhone 是后续方向。
-- iTerm2 路径仍需要更多真机覆盖；Terminal.app 已做过多窗口、多 tab 验证。
-- Warp、Ghostty、VS Code 等终端目前按能力降级，通常只能激活 app，不能精确切 tab。
-- 首次使用终端切换能力时，macOS 可能弹出 AppleScript 自动化权限。
-- MPC 依赖本地网络 / Bonjour 权限；如果 iPhone 无法发现 Mac，优先检查本地网络权限与同网环境。
-- 开发期 adhoc 签名与登录项能力存在兼容限制，当前使用 LaunchAgent backend 兜底。
+- **配对当前为 1:1**：一台 Mac 同时只接受一台 iPhone；多 Mac / 多 iPhone 在 v1.1+ 路线（见 `PRD.md` §1.5、§5）。
+- **iTerm2 真机覆盖未完成**：Terminal.app 已多窗口/多 tab 验证；iTerm2 AppleScript 路径写好但开发机器未装。
+- **部分终端只能激活 app**：Ghostty / Warp / VS Code / WezTerm / Alacritty / Kitty 等无法精确切到具体 tab。
+- **首次切终端会弹自动化权限**：macOS 系统级 TCC 弹窗，授权一次后续不再出现。
+- **本地网络权限是硬依赖**：iPhone 拒绝则无法发现 Mac；Mac 端拒绝同理。
+- **MCSession 状态偶发污染**：开发期反复连接断开后会出现新连接 1 秒即断现象，已加自动恢复（10s ≥3 次断开自动 `rebuildSession`），仍异常时手动重启 Mac app 兜底。
+- **macOS 26 `kp_eproc.e_tdev` 字段失效**：tty 解析已 fallback 到 `/bin/ps -o tty=` 兜底，性能稍差但功能正常。
 
 ## 文档索引
 
-- [PROGRESS.md](./PROGRESS.md)：开发进度、当前部署状态、常用命令、遗留项。
-- [cc-peek-PRD-v0.4.md](./cc-peek-PRD-v0.4.md)：产品定位、需求、协议与边界。
-- [cc-peek-Mac-UI-design-lite.md](./cc-peek-Mac-UI-design-lite.md)：macOS UI 设计稿说明。
-- [cc-peek-iOS-UI-design-lite.md](./cc-peek-iOS-UI-design-lite.md)：iOS UI 设计稿说明。
-- [cc-peek-website-UI-design-lite.md](./cc-peek-website-UI-design-lite.md)：网站设计稿说明。
+- [`PRD.md`](./PRD.md)：活文档，v1.1+ 产品定义。
+- [`PROGRESS.md`](./PROGRESS.md)：活文档，v1.1+ 开发进度。
+- [`docs/PRD-v1.0.md`](./docs/PRD-v1.0.md)：v1.0 封版 PRD（已交付的产品形态）。
+- [`docs/PROGRESS-v1.0.md`](./docs/PROGRESS-v1.0.md)：v1.0 封版开发记录。
+- [`AGENTS.md`](./AGENTS.md)：与 Codex / Claude 类协作 agent 协同的工作流约定。
