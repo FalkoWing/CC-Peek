@@ -1,12 +1,12 @@
 #!/bin/bash
 # 构建带拖拽安装引导的 macOS DMG:
-# 左侧 CCPeek.app, 右侧 Applications 软链接, 背景图展示箭头和 Gatekeeper 提示.
+# 左侧 CC Peek.app, 右侧 Applications 软链接, 背景图展示箭头和 Gatekeeper 提示.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-APP="$ROOT/build/CCPeek.app"
+APP="$ROOT/build/CC Peek.app"
 DMG="$ROOT/build/CCPeek.dmg"
 VOLUME_NAME="CC Peek"
 TMP_DIR="$(mktemp -d)"
@@ -35,7 +35,7 @@ if [[ ! -d "$APP" ]]; then
 fi
 
 mkdir -p "$STAGING/.background"
-ditto "$APP" "$STAGING/CCPeek.app"
+ditto "$APP" "$STAGING/CC Peek.app"
 ln -s /Applications "$STAGING/Applications"
 
 cat > "$BG_SWIFT" <<'SWIFT'
@@ -145,7 +145,7 @@ set backgroundFile to POSIX file "$MOUNT_DIR/.background/dmg-background.png" as 
 
 tell application "Finder"
     open dmgFolder
-    delay 1
+    delay 2
     set dmgWindow to container window of dmgFolder
     set current view of dmgWindow to icon view
     set toolbar visible of dmgWindow to false
@@ -155,8 +155,24 @@ tell application "Finder"
     set arrangement of viewOptions to not arranged
     set icon size of viewOptions to 96
     set background picture of viewOptions to backgroundFile
-    set position of item "CCPeek.app" of dmgFolder to {180, 210}
-    set position of item "Applications" of dmgFolder to {540, 210}
+    -- Finder 第一次扫到新 ditto 进来的 .app 时常被 Gatekeeper 占锁,
+    -- set position 会偶发 -10006 (errAEWriteDenied). 重试 10 次每次 1s.
+    repeat 10 times
+        try
+            set position of item "CC Peek.app" of dmgFolder to {180, 210}
+            exit repeat
+        on error
+            delay 1
+        end try
+    end repeat
+    repeat 10 times
+        try
+            set position of item "Applications" of dmgFolder to {540, 210}
+            exit repeat
+        on error
+            delay 1
+        end try
+    end repeat
     update dmgFolder without registering applications
     delay 1
     close dmgWindow

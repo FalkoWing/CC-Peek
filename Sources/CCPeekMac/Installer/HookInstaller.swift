@@ -32,6 +32,12 @@ enum HookInstaller {
         return dir + "/CCPeekHook"
     }
 
+    /// settings.json 的 command 字段会被 Claude Code 用 shell 跑, 路径含空格
+    /// (如 /Applications/CC Peek.app/...) 时必须包双引号防止被 shell 切词.
+    static func hookCommandString() -> String {
+        return "\"\(hookBinaryPath())\""
+    }
+
     /// 当前 settings.json 是否已安装本产品的 hook.
     static func isInstalled() -> Bool {
         guard let settings = readJSON(settingsFileURL()),
@@ -55,7 +61,7 @@ enum HookInstaller {
               let hooks = settings["hooks"] as? [String: Any] else {
             return false
         }
-        let expectedCmd = hookBinaryPath()
+        let expectedCmd = hookCommandString()
         for event in subscribedEvents {
             guard let groups = hooks[event] as? [[String: Any]] else { return false }
             let ok = groups.contains { group in
@@ -223,7 +229,7 @@ enum HookInstaller {
                 "hooks": [
                     [
                         "type": "command",
-                        "command": hookBinaryPath(),
+                        "command": hookCommandString(),
                         markerKey: markerValue,
                     ]
                 ]

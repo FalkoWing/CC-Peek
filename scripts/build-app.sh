@@ -9,8 +9,9 @@ CONFIG="${CONFIG:-release}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 CODESIGN_TIMESTAMP="${CODESIGN_TIMESTAMP:-}"
 # 文件名无空格规避 hook 路径含空格的命令解析风险.
-# 显示名 "CC Peek" 由 Info.plist CFBundleDisplayName 决定.
-APP="$ROOT/build/CCPeek.app"
+# Dock/Launchpad/Spotlight/关于此 Mac 显示名由 Info.plist CFBundleDisplayName 决定 ("CC Peek").
+# Finder /Applications/ 列表显示的是文件名 ("CCPeek"), CFBundleDisplayName 不影响这里, 已接受.
+APP="$ROOT/build/CC Peek.app"
 BIN_DIR=".build/${CONFIG}"
 
 make_spm_resource_app_path() {

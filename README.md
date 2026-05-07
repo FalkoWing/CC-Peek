@@ -7,7 +7,7 @@ CC Peek 把本机多个 Claude Code 进程的状态实时同步到一台 iPhone�
 ## 当前状态
 
 - **v1.0 已发布（2026-05-07）**
-  - macOS：`CCPeek.app` 通过 [`ccpeek.com/download`](https://ccpeek.com/download) 分发，Developer ID 签名 + 公证 + Sparkle 自动更新。
+  - macOS：`CC Peek.app` 通过 [`ccpeek.com/download`](https://ccpeek.com/download) 分发，Developer ID 签名 + 公证 + Sparkle 自动更新。
   - iOS：`CC Peek` 已上架 App Store，Bundle ID `com.ccpeek.ios`。
 - **后续迭代**：见 [`PRD.md`](./PRD.md) 与 [`PROGRESS.md`](./PROGRESS.md)。
 - **v1.0 历史档案**：[`docs/PRD-v1.0.md`](./docs/PRD-v1.0.md) + [`docs/PROGRESS-v1.0.md`](./docs/PROGRESS-v1.0.md)。
@@ -64,7 +64,7 @@ Hook 是原生 Swift 单文件二进制，避免依赖用户 shell / Node / Pyth
 ├── ios/CCPeekiOS           # iOS SwiftUI app（Xcode project）
 ├── Resources               # macOS app Info.plist 与 entitlements
 ├── scripts
-│   ├── build-app.sh                     # 出 build/CCPeek.app
+│   ├── build-app.sh                     # 出 "build/CC Peek.app"
 │   ├── build-dmg.sh                     # 出 build/CCPeek.dmg
 │   ├── build-release.sh                 # Developer ID 签名 + 公证 + DMG 全流程
 │   ├── generate-app-store-assets.mjs    # 截图/icon 复用生成
@@ -101,14 +101,14 @@ Hook 是原生 Swift 单文件二进制，避免依赖用户 shell / Node / Pyth
 ./scripts/build-app.sh
 ```
 
-输出 `build/CCPeek.app`，使用 adhoc 签名，可直接 `open`。
+输出 `build/CC Peek.app`，使用 adhoc 签名，可直接 `open`。
 
 安装到 `/Applications`：
 
 ```bash
-rm -rf /Applications/CCPeek.app
-ditto build/CCPeek.app /Applications/CCPeek.app
-open /Applications/CCPeek.app
+rm -rf "/Applications/CC Peek.app"
+ditto "build/CC Peek.app" "/Applications/CC Peek.app"
+open "/Applications/CC Peek.app"
 ```
 
 构建可分享 DMG（仍是 adhoc 签名，仅自用）：
@@ -133,9 +133,9 @@ APP_NOTARY_ID="<apple id>" \
 首次打开 Mac app 会进引导流程。命令行也可：
 
 ```bash
-"/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --install-hook
-"/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --uninstall-hook
-"/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --print-hook-path
+"/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --install-hook
+"/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --uninstall-hook
+"/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --print-hook-path
 ```
 
 `--install-hook` 会修改 `~/.claude/settings.json`，写入前自动备份为 `settings.json.ccpeek-backup-<ts>`。
@@ -146,7 +146,7 @@ APP_NOTARY_ID="<apple id>" \
 open ios/CCPeekiOS/CCPeekiOS.xcodeproj
 ```
 
-在 Xcode 选开发团队 + 真机，跑 `CCPeekiOS` target。Mac 端 `CCPeek.app` 同时运行后，iPhone 端会自动发现 Mac，点击 → Mac 弹信任确认 → 配对完成。
+在 Xcode 选开发团队 + 真机，跑 `CCPeekiOS` target。Mac 端 `CC Peek.app` 同时运行后，iPhone 端会自动发现 Mac，点击 → Mac 弹信任确认 → 配对完成。
 
 未配对状态下也可以走"演示模式"体验完整 UI。
 
@@ -167,10 +167,10 @@ CCPEEK_MOCK_NAME=DemoPhone swift run CCPeekMockClient
 ```bash
 # 重新触发首次引导（清 onboarding flag）
 defaults delete com.ccpeek.mac ccpeek.onboardingCompleted
-open /Applications/CCPeek.app
+open "/Applications/CC Peek.app"
 
 # 查看某个 PID 的父进程链与 tty 解析
-"/Applications/CCPeek.app/Contents/MacOS/CCPeekMac" --debug-tree <pid>
+"/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --debug-tree <pid>
 
 # 开启 hook debug 日志（在跑 Claude Code 的 shell 内）
 export CC_PEEK_DEBUG=1
