@@ -16,3 +16,6 @@ xcuserdata/
 
 # Claude Code per-user settings
 .claude/
+
+# 内部操作清单 (开源筹备文档, 不公开)
+docs/open-source-plan.md
