@@ -292,8 +292,8 @@ private struct StaleBanner: View {
 
     private func label(elapsed: TimeInterval) -> String {
         let minutes = Int(elapsed / 60)
-        if minutes < 1 { return "已断开 · 显示刚才的状态" }
-        return "已断开 · 显示 \(minutes) 分钟前的状态"
+        if minutes < 1 { return String(localized: "已断开 · 显示刚才的状态") }
+        return String(localized: "已断开 · 显示 \(minutes) 分钟前的状态")
     }
 }
 
@@ -306,7 +306,7 @@ private struct BottomBar: View {
 
     var body: some View {
         HStack {
-            Text(isConnected ? "已同步" : "已断开")
+            Text(isConnected ? String(localized: "已同步") : String(localized: "已断开"))
                 .font(Theme.mono(10, weight: .regular))
                 .tracking(1.0)             // 0.1em @ 10pt
                 .foregroundStyle(Theme.fgFaint)

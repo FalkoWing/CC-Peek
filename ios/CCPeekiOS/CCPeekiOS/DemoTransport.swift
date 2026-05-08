@@ -97,7 +97,7 @@ final class DemoTransport: Transport {
         let result = TransportMessage.SwitchResult(
             processId: payload.processId,
             success: success,
-            errorMessage: success ? nil : "演示模式: 该进程暂不可切换"
+            errorMessage: success ? nil : String(localized: "演示模式: 该进程暂不可切换")
         )
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self else { return }

@@ -27,10 +27,10 @@ struct DeviceSwitcherView: View {
 
     private var sheet: some View {
         VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("正在连接")
+            sectionLabel(String(localized: "正在连接"))
             DeviceRow(
                 name: client.pairedHostName ?? "—",
-                subtitle: "本地网络 · Wi-Fi",
+                subtitle: String(localized: "本地网络 · Wi-Fi"),
                 statusBadge: .current
             )
             DottedDivider()

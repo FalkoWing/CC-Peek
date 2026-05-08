@@ -1,0 +1,23 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "version" : "1.0",
+  "strings" : {
+    "NSLocalNetworkUsageDescription" : {
+      "comment" : "Local Network usage description shown in system permission alert",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CC Peek discovers and connects to your Mac on the same Wi-Fi. All session-status data is sent peer-to-peer between the two devices and never uploaded to any server."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CC Peek 在同一 Wi-Fi 下发现并连接你的 Mac，所有进程状态数据仅在两台设备之间点对点传输，不会上传任何服务器。"
+          }
+        }
+      }
+    }
+  }
+}

@@ -98,7 +98,7 @@ struct OnboardingView: View {
                     HStack(spacing: 4) {
                         Image(systemName: copyJustTapped ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 11, weight: .semibold))
-                        Text(copyJustTapped ? "已复制" : "复制")
+                        Text(copyJustTapped ? String(localized: "已复制") : String(localized: "复制"))
                             .font(Theme.mono(11, weight: .semibold))
                             .tracking(0.42)
                     }

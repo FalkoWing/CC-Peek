@@ -100,7 +100,7 @@ struct DeviceRow: View {
                             .font(Theme.ui(14, weight: .semibold))
                             .foregroundStyle(Theme.fg)
                         if statusBadge == .current {
-                            badgePill(text: "已连接", greenStyle: true, withDot: true)
+                            badgePill(text: String(localized: "已连接"), greenStyle: true, withDot: true)
                         }
                     }
                     Text(subtitle)
@@ -112,9 +112,9 @@ struct DeviceRow: View {
                 Spacer(minLength: 0)
 
                 if statusBadge == .online {
-                    badgePill(text: "在线", greenStyle: true)
+                    badgePill(text: String(localized: "在线"), greenStyle: true)
                 } else if statusBadge == .offline {
-                    badgePill(text: "离线", greenStyle: false)
+                    badgePill(text: String(localized: "离线"), greenStyle: false)
                 }
 
                 if trailingChevron {

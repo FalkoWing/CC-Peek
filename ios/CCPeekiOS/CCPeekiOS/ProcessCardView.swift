@@ -31,7 +31,7 @@ struct ProcessCardView: View {
         }
         var footerSize: CGFloat { self == .compact ? 12 : 13 }
         var termLabel: String { self == .compact ? "TERM" : "TERMINAL" }
-        var durationLabel: String { self == .compact ? "时长" : "已持续" }
+        var durationLabel: String { self == .compact ? String(localized: "时长") : String(localized: "已持续") }
     }
 
     var body: some View {
@@ -325,7 +325,7 @@ private struct CardStatusStyle {
     }
 
     static let errorStyle = CardStatusStyle(
-        label: "切换失败",
+        label: String(localized: "切换失败"),
         textColor: Color.oklch(0.78, 0.18, 25),
         edgeColor: Color.oklch(0.78, 0.18, 25),
         edgeOpacity: 0.95
@@ -443,13 +443,13 @@ private func formatDuration(secondsBetween from: Date, and to: Date) -> String {
 }
 
 private func formatDuration(_ seconds: Int) -> String {
-    if seconds < 60 { return "\(seconds) 秒" }
+    if seconds < 60 { return String(localized: "\(seconds) 秒") }
     let m = seconds / 60
     let rs = seconds % 60
-    if m < 60 { return rs > 0 ? "\(m) 分 \(rs) 秒" : "\(m) 分" }
+    if m < 60 { return rs > 0 ? String(localized: "\(m) 分 \(rs) 秒") : String(localized: "\(m) 分") }
     let h = m / 60
     let rm = m % 60
-    return rm > 0 ? "\(h) 小时 \(rm) 分 \(rs) 秒" : "\(h) 小时"
+    return rm > 0 ? String(localized: "\(h) 小时 \(rm) 分 \(rs) 秒") : String(localized: "\(h) 小时")
 }
 
 // MARK: - Preview

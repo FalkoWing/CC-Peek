@@ -74,7 +74,7 @@ private struct ContentRoot: View {
             // 已连接时说明本地网络实际可用, 不显示探测误判产生的"无法发现 Mac".
             if shouldShowPermissionBanner {
                 PermissionBanner(
-                    title: "本地网络权限未授权,无法发现 Mac",
+                    title: String(localized: "本地网络权限未授权,无法发现 Mac"),
                     onOpenSettings: { permissionMonitor.openAppSettings() }
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))

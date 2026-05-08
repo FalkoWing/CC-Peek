@@ -13,6 +13,8 @@ struct SettingsView: View {
 
     @State private var confirmUnpair = false
     @AppStorage("ccpeek.iosDemoMode") private var isDemoMode = false
+    @State private var currentLanguage: AppLanguage = AppLanguageManager.current
+    @State private var showRestartHint = false
 
     var body: some View {
         ZStack {
@@ -27,6 +29,7 @@ struct SettingsView: View {
                             permissionsSection
                         }
                         displaySection
+                        languageSection
                         demoSection
                         aboutSection
                         if !isDemoMode {
@@ -40,6 +43,11 @@ struct SettingsView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .alert(String(localized: "需要重启"), isPresented: $showRestartHint) {
+            Button(String(localized: "好的"), role: .cancel) {}
+        } message: {
+            Text("语言已更改。请关闭 app 后重新打开以应用新语言。")
+        }
         .confirmationDialog("解除与该 Mac 的配对?",
                             isPresented: $confirmUnpair,
                             titleVisibility: .visible) {
@@ -76,7 +84,7 @@ struct SettingsView: View {
 
     private var pairedSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel("已配对的 MAC")
+            SectionLabel(String(localized: "已配对的 MAC"))
             SurfaceCard {
                 DeviceRow(
                     name: client.pairedHostName ?? "—",
@@ -88,14 +96,14 @@ struct SettingsView: View {
     }
 
     private var pairedSubtitle: String {
-        if client.isDemo { return "演示连接 · 模拟数据" }
+        if client.isDemo { return String(localized: "演示连接 · 模拟数据") }
         switch client.status {
-        case .connected:           return "刚刚 · Wi-Fi"
-        case .connecting:          return "正在连接…"
+        case .connected:           return String(localized: "刚刚 · Wi-Fi")
+        case .connecting:          return String(localized: "正在连接…")
         case .browsing, .awaitingSelection:
-            return "搜索中…"
-        case .disconnected:        return "已断开"
-        case .idle:                return "未启动"
+            return String(localized: "搜索中…")
+        case .disconnected:        return String(localized: "已断开")
+        case .idle:                return String(localized: "未启动")
         }
     }
 
@@ -103,11 +111,11 @@ struct SettingsView: View {
 
     private var permissionsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel("系统权限")
+            SectionLabel(String(localized: "系统权限"))
             SurfaceCard {
                 SettingsRow(
                     leadingSystemImage: "wifi",
-                    title: "本地网络",
+                    title: String(localized: "本地网络"),
                     subtitle: localNetworkSubtitle,
                     divider: false
                 ) {
@@ -124,9 +132,9 @@ struct SettingsView: View {
 
     private var localNetworkSubtitle: String {
         switch permissionMonitor.localNetwork {
-        case .granted: return "已授权"
-        case .denied: return "已拒绝 · 无法发现 Mac"
-        case .undetermined: return "检测中…"
+        case .granted: return String(localized: "已授权")
+        case .denied: return String(localized: "已拒绝 · 无法发现 Mac")
+        case .undetermined: return String(localized: "检测中…")
         }
     }
 
@@ -134,11 +142,11 @@ struct SettingsView: View {
     private func permissionPill(for status: PermissionMonitor.LocalNetworkStatus) -> some View {
         switch status {
         case .granted:
-            pillView(text: "已授权", hue: 150)
+            pillView(text: String(localized: "已授权"), hue: 150)
         case .undetermined:
-            pillView(text: "检测中", hue: 240)
+            pillView(text: String(localized: "检测中"), hue: 240)
         case .denied:
-            pillView(text: "已拒绝", hue: 25)
+            pillView(text: String(localized: "已拒绝"), hue: 25)
         }
     }
 
@@ -182,12 +190,12 @@ struct SettingsView: View {
 
     private var displaySection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel("显示")
+            SectionLabel(String(localized: "显示"))
             SurfaceCard {
                 SettingsRow(
                     leadingSystemImage: "sun.max",
-                    title: "保持屏幕常亮",
-                    subtitle: "app 在前台时阻止熄屏",
+                    title: String(localized: "保持屏幕常亮"),
+                    subtitle: String(localized: "app 在前台时阻止熄屏"),
                     divider: false
                 ) {
                     IOSToggle(isOn: $keepAwake.enabled)
@@ -196,16 +204,63 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: 语言
+
+    private var languageSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(String(localized: "语言"))
+            SurfaceCard {
+                SettingsRow(
+                    leadingSystemImage: "globe",
+                    title: String(localized: "显示语言"),
+                    subtitle: String(localized: "更改后需重启 app 生效"),
+                    divider: false
+                ) {
+                    Menu {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Button {
+                                selectLanguage(lang)
+                            } label: {
+                                if lang == currentLanguage {
+                                    Label(lang.displayName, systemImage: "checkmark")
+                                } else {
+                                    Text(lang.displayName)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(currentLanguage.displayName)
+                                .font(Theme.mono(12, weight: .regular))
+                                .foregroundStyle(Theme.fgDim)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(Theme.fgFaint)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func selectLanguage(_ lang: AppLanguage) {
+        guard lang != currentLanguage else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        AppLanguageManager.set(lang)
+        currentLanguage = lang
+        showRestartHint = true
+    }
+
     // MARK: 演示模式
 
     private var demoSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel("演示模式")
+            SectionLabel(String(localized: "演示模式"))
             SurfaceCard {
                 SettingsRow(
                     leadingSystemImage: "play.rectangle",
-                    title: "演示模式",
-                    subtitle: isDemoMode ? "正在使用模拟数据" : "用模拟数据体验界面",
+                    title: String(localized: "演示模式"),
+                    subtitle: isDemoMode ? String(localized: "正在使用模拟数据") : String(localized: "用模拟数据体验界面"),
                     divider: false
                 ) {
                     IOSToggle(isOn: Binding(
@@ -221,8 +276,8 @@ struct SettingsView: View {
                 }
             }
             Text(isDemoMode
-                ? "关闭后回到真实配对状态。"
-                : "适合在 Mac 端没启动时试用界面,所有数据都是模拟的。")
+                ? String(localized: "关闭后回到真实配对状态。")
+                : String(localized: "适合在 Mac 端没启动时试用界面,所有数据都是模拟的。"))
                 .font(Theme.mono(11, weight: .regular))
                 .foregroundStyle(Theme.fgFaint)
                 .padding(.horizontal, 4)
@@ -235,9 +290,9 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel("关于")
+            SectionLabel(String(localized: "关于"))
             SurfaceCard {
-                SettingsRow(title: "版本") {
+                SettingsRow(title: String(localized: "版本")) {
                     Text(versionString)
                         .font(Theme.mono(12, weight: .regular))
                         .foregroundStyle(Theme.fgDim)
@@ -249,14 +304,14 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.fgDim)
                 }
                 DottedDivider()
-                SettingsRow(title: "本机") {
+                SettingsRow(title: String(localized: "本机")) {
                     Text(UIDevice.current.name)
                         .font(Theme.mono(12, weight: .regular))
                         .foregroundStyle(Theme.fgDim)
                         .lineLimit(1)
                 }
                 DottedDivider()
-                SettingsRow(title: "隐私政策", divider: false) {
+                SettingsRow(title: String(localized: "隐私政策"), divider: false) {
                     Link(destination: URL(string: "https://ccpeek.com/privacy")!) {
                         HStack(spacing: 4) {
                             Text("查看")

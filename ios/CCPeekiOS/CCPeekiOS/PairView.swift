@@ -100,9 +100,9 @@ struct PairView: View {
     private var chromeSubtitle: String? {
         if !client.discoveredHosts.isEmpty {
             if case .connecting(let peer) = client.status {
-                return "正在等待 \(peer) 确认…"
+                return String(localized: "正在等待 \(peer) 确认…")
             }
-            return "已发现下列设备"
+            return String(localized: "已发现下列设备")
         }
         return nil
     }
@@ -342,11 +342,11 @@ private struct SignalDots: View {
 private struct PairEmptyView: View {
     let onRetry: () -> Void
 
-    private let checkItems = [
-        "Mac 端 CC Peek 已启动",
-        "两台设备均已开启 Wi-Fi",
-        "两台设备在同一 Wi-Fi 下",
-        "iPhone 已授予本地网络权限"
+    private let checkItems: [String] = [
+        String(localized: "Mac 端 CC Peek 已启动"),
+        String(localized: "两台设备均已开启 Wi-Fi"),
+        String(localized: "两台设备在同一 Wi-Fi 下"),
+        String(localized: "iPhone 已授予本地网络权限")
     ]
 
     var body: some View {

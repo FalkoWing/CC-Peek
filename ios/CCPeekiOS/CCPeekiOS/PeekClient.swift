@@ -185,7 +185,7 @@ final class PeekClient: ObservableObject {
                       self.pendingPairing?.host.id == host.id else { return }
                 self.pendingPairing = nil
                 self.status = self.discoveredHosts.isEmpty ? .browsing : .awaitingSelection
-                self.lastError = "配对未完成,请确认 Mac 端已接受邀请"
+                self.lastError = String(localized: "配对未完成,请确认 Mac 端已接受邀请")
                 self.pairingTimeoutTask = nil
             }
         }
@@ -277,7 +277,7 @@ final class PeekClient: ObservableObject {
                 if result.success {
                     self.switchErrors.removeValue(forKey: result.processId)
                 } else {
-                    let message = result.errorMessage ?? "切换失败"
+                    let message = result.errorMessage ?? String(localized: "切换失败")
                     self.switchErrors[result.processId] = message
                     let pid = result.processId
                     self.switchErrorClearTasks[pid] = Task { [weak self] in
