@@ -17,21 +17,15 @@ enum FeedbackComposer {
         }
 
         let alert = NSAlert()
-        alert.messageText = "反馈内容已复制到剪贴板"
+        alert.messageText = String(localized: "反馈内容已复制到剪贴板")
         if crash != nil {
-            alert.informativeText = """
-            最近一份崩溃日志已在 Finder 中标出。
-            请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具, 并附带 Finder 里高亮的 .ips 文件。
-            """
+            alert.informativeText = String(localized: "最近一份崩溃日志已在 Finder 中标出。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具, 并附带 Finder 里高亮的 .ips 文件。")
         } else {
-            alert.informativeText = """
-            未发现近期崩溃日志, 仅复制了基础诊断信息。
-            请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具。
-            """
+            alert.informativeText = String(localized: "未发现近期崩溃日志, 仅复制了基础诊断信息。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具。")
         }
         alert.alertStyle = .informational
-        alert.addButton(withTitle: "好的")
-        alert.addButton(withTitle: "改用邮件发送")
+        alert.addButton(withTitle: String(localized: "好的"))
+        alert.addButton(withTitle: String(localized: "改用邮件发送"))
 
         if alert.runModal() == .alertSecondButtonReturn {
             openMail(body: body)
@@ -43,7 +37,7 @@ enum FeedbackComposer {
         components.scheme = "mailto"
         components.path = "support@ccpeek.com"
         components.queryItems = [
-            URLQueryItem(name: "subject", value: "CC Peek 反馈"),
+            URLQueryItem(name: "subject", value: String(localized: "CC Peek 反馈")),
             URLQueryItem(name: "body", value: body)
         ]
         guard let url = components.url else { return }
@@ -52,18 +46,18 @@ enum FeedbackComposer {
 
     private static func composeBody(crash: URL?) -> String {
         var lines = [
-            "请简单描述你遇到的问题：",
+            String(localized: "请简单描述你遇到的问题："),
             "",
             "",
             "----",
-            "版本：\(versionString)",
-            "系统：\(ProcessInfo.processInfo.operatingSystemVersionString)",
-            "诊断日志：\(DiagnosticLogger.fileURL.path)"
+            String(localized: "版本：\(versionString)"),
+            String(localized: "系统：\(ProcessInfo.processInfo.operatingSystemVersionString)"),
+            String(localized: "诊断日志：\(DiagnosticLogger.fileURL.path)")
         ]
         if let crash {
-            lines.append("最近崩溃日志：\(crash.path)")
+            lines.append(String(localized: "最近崩溃日志：\(crash.path)"))
         } else {
-            lines.append("最近崩溃日志：未找到")
+            lines.append(String(localized: "最近崩溃日志：未找到"))
         }
         return lines.joined(separator: "\n")
     }

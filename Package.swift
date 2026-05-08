@@ -1,8 +1,9 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.10
 import PackageDescription
 
 let package = Package(
-    name: "cc-peek",
+    name: "cc-peek-monorepo",
+    defaultLocalization: "zh-Hans",
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .library(name: "CCPeekCore", targets: ["CCPeekCore"]),
@@ -30,7 +31,8 @@ let package = Package(
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
                 "Sparkle",
             ],
-            path: "Sources/CCPeekMac"
+            path: "Sources/CCPeekMac",
+            resources: [.process("Resources")]
         ),
         .executableTarget(
             name: "CCPeekMockClient",

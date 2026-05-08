@@ -190,8 +190,8 @@ final class HostTransportBridge: ObservableObject {
     private static func askUserToTrust(peer: TransportPeer) -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "信任新设备?"
-        alert.informativeText = "iPhone “\(peer.displayName)” 想要连接到 CC Peek。\n仅信任你认识的设备。"
+        alert.messageText = String(localized: "信任新设备?")
+        alert.informativeText = String(localized: "iPhone “\(peer.displayName)” 想要连接到 CC Peek。\n仅信任你认识的设备。")
         alert.alertStyle = .warning
         alert.addButton(withTitle: "信任并配对")
         alert.addButton(withTitle: "拒绝")
@@ -201,7 +201,7 @@ final class HostTransportBridge: ObservableObject {
 
     private func handleSwitchTo(_ payload: TransportMessage.SwitchTo, from peer: TransportPeer) {
         guard let proc = store.processes.first(where: { $0.id == payload.processId }) else {
-            replySwitch(processId: payload.processId, success: false, error: "进程不存在", to: peer)
+            replySwitch(processId: payload.processId, success: false, error: String(localized: "进程不存在"), to: peer)
             return
         }
         let result = TerminalSwitcher.switch(to: proc)

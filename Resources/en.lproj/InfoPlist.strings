@@ -1,0 +1,3 @@
+"NSAppleEventsUsageDescription" = "CC Peek needs to control Terminal / iTerm2 to switch to the matching window or tab.";
+"NSLocalNetworkUsageDescription" = "CC Peek discovers and connects to your iPhone on the same network to sync Claude Code session state in real time.";
+"NSBluetoothAlwaysUsageDescription" = "CC Peek talks to iPhones on the same network via MultipeerConnectivity; in some cases the system uses Bluetooth to speed up device discovery.";

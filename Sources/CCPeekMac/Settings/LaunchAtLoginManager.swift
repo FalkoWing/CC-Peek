@@ -40,14 +40,14 @@ enum LaunchAtLoginManager {
         switch backend {
         case .smAppService:
             switch SMAppService.mainApp.status {
-            case .notRegistered:    return "未开启 (SMAppService)"
-            case .enabled:          return "已开启 (SMAppService)"
-            case .requiresApproval: return "需在系统设置允许"
-            case .notFound:         return "Launch Services 未识别"
-            @unknown default:       return "未知"
+            case .notRegistered:    return String(localized: "未开启 (SMAppService)")
+            case .enabled:          return String(localized: "已开启 (SMAppService)")
+            case .requiresApproval: return String(localized: "需在系统设置允许")
+            case .notFound:         return String(localized: "Launch Services 未识别")
+            @unknown default:       return String(localized: "未知")
             }
         case .launchAgent:
-            return launchAgentPlistExists() ? "已开启 (LaunchAgent)" : "未开启 (LaunchAgent)"
+            return launchAgentPlistExists() ? String(localized: "已开启 (LaunchAgent)") : String(localized: "未开启 (LaunchAgent)")
         }
     }
 
@@ -56,7 +56,7 @@ enum LaunchAtLoginManager {
         case .smAppService:
             return ""
         case .launchAgent:
-            return "当前 .app 用 adhoc 签名, 系统登录项面板不接受. CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启 (与签名等级无关)."
+            return String(localized: "当前 .app 用 adhoc 签名, 系统登录项面板不接受. CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启 (与签名等级无关).")
         }
     }
 

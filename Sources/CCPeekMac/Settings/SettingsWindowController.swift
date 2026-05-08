@@ -28,7 +28,7 @@ final class SettingsWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "CC Peek 设置"
+        window.title = String(localized: "CC Peek 设置")
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(rootView: SettingsView())
         window.center()

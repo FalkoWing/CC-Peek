@@ -58,6 +58,13 @@ cp "$BIN_DIR/CCPeekHook" "$APP/Contents/MacOS/CCPeekHook"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
+# Info.plist 本地化 — InfoPlist.strings 由系统按 locale 自动选择,
+# Bundle.localizedInfoDictionary 在系统语言匹配时返回对应翻译.
+for lproj in Resources/*.lproj; do
+    [[ -d "$lproj" ]] || continue
+    cp -R "$lproj" "$APP/Contents/Resources/"
+done
+
 SPARKLE_FRAMEWORK="$(find -L .build/artifacts -path "*/Sparkle.framework" -type d | head -n 1 || true)"
 if [[ -z "$SPARKLE_FRAMEWORK" ]]; then
     echo "Sparkle.framework 未找到, 请先确认 SwiftPM binary artifact 已下载" >&2

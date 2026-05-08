@@ -25,7 +25,7 @@ final class DiagnosticLogWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "CC Peek 诊断日志"
+        window.title = String(localized: "CC Peek 诊断日志")
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 600, height: 360)
         window.contentViewController = NSHostingController(rootView: DiagnosticLogView())

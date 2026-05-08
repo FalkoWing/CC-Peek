@@ -98,19 +98,19 @@ struct OnboardingView: View {
             VStack(spacing: 10) {
                 permissionCard(
                     icon: "dot.radiowaves.left.and.right",
-                    title: "蓝牙",
+                    title: String(localized: "蓝牙"),
                     desc: "CC Peek 需要蓝牙来发现和连接你的 iPhone",
                     urlString: "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth"
                 )
                 permissionCard(
                     icon: "wifi",
-                    title: "本地网络",
+                    title: String(localized: "本地网络"),
                     desc: "通过本地网络与 iPhone 通信，传输进程状态信息",
                     urlString: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"
                 )
                 permissionCard(
                     icon: "play.rectangle",
-                    title: "自动化",
+                    title: String(localized: "自动化"),
                     desc: "用于自动切换终端窗口到对应的 Claude Code 进程",
                     urlString: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
                 )

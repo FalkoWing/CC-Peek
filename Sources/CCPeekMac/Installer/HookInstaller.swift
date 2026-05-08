@@ -129,7 +129,7 @@ enum HookInstaller {
             do {
                 try FileManager.default.copyItem(at: url, to: backupURL)
             } catch {
-                return (false, "备份 settings.json 失败: \(error.localizedDescription)")
+                return (false, String(localized: "备份 settings.json 失败: \(error.localizedDescription)"))
             }
         }
 
@@ -142,7 +142,7 @@ enum HookInstaller {
         do {
             try plan.targetText.write(to: url, atomically: true, encoding: .utf8)
         } catch {
-            return (false, "写入 settings.json 失败: \(error.localizedDescription)")
+            return (false, String(localized: "写入 settings.json 失败: \(error.localizedDescription)"))
         }
 
         return (true, nil)

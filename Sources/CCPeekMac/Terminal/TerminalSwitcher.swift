@@ -27,7 +27,7 @@ enum TerminalSwitcher {
         ])
 
         guard let location = process.terminal else {
-            return .unsupported(reason: "未识别终端 app")
+            return .unsupported(reason: String(localized: "未识别终端 app"))
         }
 
         // 先把 app 切前台. NSRunningApplication 比 AppleScript 更便宜也更稳.
@@ -144,11 +144,11 @@ enum TerminalSwitcher {
         var errorInfo: NSDictionary?
         guard let script = NSAppleScript(source: source) else {
             DiagnosticLogger.error("applescript", "AppleScript 编译失败", context: ["terminal": terminal])
-            return .failed(reason: "AppleScript 编译失败 (\(terminal))")
+            return .failed(reason: String(localized: "AppleScript 编译失败 (\(terminal))"))
         }
         let descriptor = script.executeAndReturnError(&errorInfo)
         if let errorInfo {
-            let msg = (errorInfo[NSAppleScript.errorMessage] as? String) ?? "未知错误"
+            let msg = (errorInfo[NSAppleScript.errorMessage] as? String) ?? String(localized: "未知错误")
             let code = (errorInfo[NSAppleScript.errorNumber] as? Int) ?? 0
             DiagnosticLogger.error("applescript", "AppleScript 执行失败", context: [
                 "terminal": terminal,
@@ -157,9 +157,9 @@ enum TerminalSwitcher {
             ])
             // 1743 = TCC 拒绝, 用户没给自动化权限.
             if code == -1743 {
-                return .failed(reason: "缺少自动化权限. 请到 系统设置 > 隐私与安全性 > 自动化, 允许本程序控制 \(terminal).")
+                return .failed(reason: String(localized: "缺少自动化权限. 请到 系统设置 > 隐私与安全性 > 自动化, 允许本程序控制 \(terminal)."))
             }
-            return .failed(reason: "\(terminal) AppleScript 执行失败: \(msg)")
+            return .failed(reason: String(localized: "\(terminal) AppleScript 执行失败: \(msg)"))
         }
         let returned = descriptor.stringValue ?? ""
         if returned == "matched" {

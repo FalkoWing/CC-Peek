@@ -18,13 +18,13 @@ private enum SettingsCategory: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .hookConfig:   return "Hook 配置"
-        case .pairedPhones: return "已配对手机"
-        case .permissions:  return "系统权限"
-        case .terminals:    return "支持的终端"
-        case .general:      return "通用"
-        case .about:        return "关于"
-        case .danger:       return "危险操作"
+        case .hookConfig:   return String(localized: "Hook 配置")
+        case .pairedPhones: return String(localized: "已配对手机")
+        case .permissions:  return String(localized: "系统权限")
+        case .terminals:    return String(localized: "支持的终端")
+        case .general:      return String(localized: "通用")
+        case .about:        return String(localized: "关于")
+        case .danger:       return String(localized: "危险操作")
         }
     }
 
@@ -177,7 +177,7 @@ private struct HookConfigDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             DetailHeader(
-                title: "Hook 配置",
+                title: String(localized: "Hook 配置"),
                 trailing: AnyView(
                     Text("~/.claude/settings.json")
                         .font(Theme.mono(11, weight: .regular))
@@ -190,19 +190,23 @@ private struct HookConfigDetail: View {
                     HStack(spacing: 12) {
                         statusIcon
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(hookInstalled ? "已配置 — 正常运行中" : "未配置")
+                            Text(hookInstalled
+                                ? String(localized: "已配置 — 正常运行中")
+                                : String(localized: "未配置"))
                                 .font(Theme.ui(13.5, weight: .semibold))
                                 .foregroundStyle(Theme.fg)
                             Text(hookInstalled
-                                ? "Stop / Notification / SessionStart 等 6 类 Hook 已注册"
-                                : "未在 settings.json 中检测到 CC Peek Hook 条目")
+                                ? String(localized: "Stop / Notification / SessionStart 等 6 类 Hook 已注册")
+                                : String(localized: "未在 settings.json 中检测到 CC Peek Hook 条目"))
                                 .font(Theme.mono(11.5, weight: .regular))
                                 .foregroundStyle(Theme.fgDim)
                         }
                         Spacer()
                     }
                     HStack(spacing: 8) {
-                        Button(hookBusy ? "处理中..." : (hookInstalled ? "重新配置" : "安装 Hook")) {
+                        Button(hookBusy
+                                ? String(localized: "处理中...")
+                                : (hookInstalled ? String(localized: "重新配置") : String(localized: "安装 Hook"))) {
                             reinstallHook()
                         }
                         .disabled(hookBusy)
@@ -254,7 +258,7 @@ private struct HookConfigDetail: View {
     private func reinstallHook() {
         guard !hookBusy else { return }
         hookBusy = true
-        hookActionMessage = "正在准备配置预览..."
+        hookActionMessage = String(localized: "正在准备配置预览...")
         Task.detached {
             let plan = HookInstaller.computePlan()
             await MainActor.run {
@@ -269,7 +273,7 @@ private struct HookConfigDetail: View {
     private func applyHook(_ plan: HookInstaller.Plan) {
         guard !hookBusy else { return }
         hookBusy = true
-        hookActionMessage = "正在写入配置..."
+        hookActionMessage = String(localized: "正在写入配置...")
         Task.detached {
             let (ok, err) = HookInstaller.apply(plan: plan)
             let installed = HookInstaller.isInstalled()
@@ -277,9 +281,9 @@ private struct HookConfigDetail: View {
                 hookBusy = false
                 hookInstalled = installed
                 if ok {
-                    hookActionMessage = "已写入. 备份在 \(plan.backupPath ?? "(未备份)")"
+                    hookActionMessage = String(localized: "已写入. 备份在 \(plan.backupPath ?? String(localized: "(未备份)"))")
                 } else {
-                    hookActionMessage = "写入失败: \(err ?? "未知错误")"
+                    hookActionMessage = String(localized: "写入失败: \(err ?? String(localized: "未知错误"))")
                 }
                 // 重装后立刻重检一次, banner / 红点马上消失.
                 HookHealthMonitor.shared.checkNow()
@@ -301,7 +305,7 @@ private struct PairedPhonesDetail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DetailHeader(title: "已配对手机")
+            DetailHeader(title: String(localized: "已配对手机"))
 
             if paired.isEmpty {
                 SurfaceCard {
@@ -329,7 +333,7 @@ private struct PairedPhonesDetail: View {
                             SettingsRow(
                                 leadingIcon: "iphone",
                                 title: name,
-                                subtitle: "已配对",
+                                subtitle: String(localized: "已配对"),
                                 divider: idx < paired.count - 1,
                                 trailing: AnyView(
                                     Button("解除配对") { unpairTarget = name }
@@ -376,14 +380,14 @@ private struct PairedPhonesDetail: View {
 private struct PermissionsDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DetailHeader(title: "系统权限")
+            DetailHeader(title: String(localized: "系统权限"))
 
             SurfaceCard {
                 VStack(spacing: 0) {
                     SettingsRow(
                         leadingIcon: "play.rectangle",
-                        title: "自动化权限",
-                        subtitle: "Terminal / iTerm2 切 tab 与窗口激活所需",
+                        title: String(localized: "自动化权限"),
+                        subtitle: String(localized: "Terminal / iTerm2 切 tab 与窗口激活所需"),
                         divider: true,
                         trailing: AnyView(
                             Button("去设置") { openURL("x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") }
@@ -392,8 +396,8 @@ private struct PermissionsDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "wifi",
-                        title: "本地网络权限",
-                        subtitle: "MultipeerConnectivity 与 iPhone 通信所需",
+                        title: String(localized: "本地网络权限"),
+                        subtitle: String(localized: "MultipeerConnectivity 与 iPhone 通信所需"),
                         divider: true,
                         trailing: AnyView(
                             Button("去设置") { openURL("x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork") }
@@ -402,8 +406,8 @@ private struct PermissionsDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "dot.radiowaves.left.and.right",
-                        title: "蓝牙权限",
-                        subtitle: "MultipeerConnectivity 设备发现所需",
+                        title: String(localized: "蓝牙权限"),
+                        subtitle: String(localized: "MultipeerConnectivity 设备发现所需"),
                         divider: false,
                         trailing: AnyView(
                             Button("去设置") { openURL("x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth") }
@@ -432,17 +436,17 @@ private struct TerminalSupportDetail: View {
     private enum Tier { case full, partial, none }
 
     private let items: [Item] = [
-        Item(name: "Terminal.app",   behavior: "激活 app + 精确定位到 tab",   tier: .full),
-        Item(name: "iTerm2",         behavior: "激活 app + 精确定位到 tab/pane", tier: .full),
-        Item(name: "Ghostty",        behavior: "仅激活 app",                  tier: .partial),
-        Item(name: "Warp",           behavior: "仅激活 app",                  tier: .partial),
-        Item(name: "VS Code 终端",   behavior: "仅激活窗口",                  tier: .partial),
-        Item(name: "其他终端",       behavior: "显示状态，禁用切换",          tier: .none),
+        Item(name: "Terminal.app",   behavior: String(localized: "激活 app + 精确定位到 tab"),   tier: .full),
+        Item(name: "iTerm2",         behavior: String(localized: "激活 app + 精确定位到 tab/pane"), tier: .full),
+        Item(name: "Ghostty",        behavior: String(localized: "仅激活 app"),                  tier: .partial),
+        Item(name: "Warp",           behavior: String(localized: "仅激活 app"),                  tier: .partial),
+        Item(name: String(localized: "VS Code 终端"),   behavior: String(localized: "仅激活窗口"),                  tier: .partial),
+        Item(name: String(localized: "其他终端"),       behavior: String(localized: "显示状态，禁用切换"),          tier: .none),
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DetailHeader(title: "支持的终端")
+            DetailHeader(title: String(localized: "支持的终端"))
 
             SurfaceCard {
                 VStack(spacing: 0) {
@@ -472,9 +476,9 @@ private struct TerminalSupportDetail: View {
     @ViewBuilder
     private func tierLabel(_ tier: Tier) -> some View {
         switch tier {
-        case .full:    StatusPill(text: "完整", style: .online)
-        case .partial: StatusPill(text: "部分", style: .warning)
-        case .none:    StatusPill(text: "不支持", style: .offline)
+        case .full:    StatusPill(text: String(localized: "完整"), style: .online)
+        case .partial: StatusPill(text: String(localized: "部分"), style: .warning)
+        case .none:    StatusPill(text: String(localized: "不支持"), style: .offline)
         }
     }
 
@@ -496,17 +500,19 @@ private struct GeneralDetail: View {
     )
     @State private var automaticallyChecksForUpdates = SoftwareUpdateController.shared.automaticallyChecksForUpdates
     @State private var statusMessage: String?
+    @State private var currentLanguage: AppLanguage = AppLanguageManager.current
+    @State private var pendingLanguage: AppLanguage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DetailHeader(title: "通用")
+            DetailHeader(title: String(localized: "通用"))
 
             SurfaceCard {
                 VStack(spacing: 0) {
                     SettingsRow(
                         leadingIcon: "command",
-                        title: "全局快捷键",
-                        subtitle: "随时唤起 Dashboard；菜单栏图标被遮挡时也能用",
+                        title: String(localized: "全局快捷键"),
+                        subtitle: String(localized: "随时唤起 Dashboard；菜单栏图标被遮挡时也能用"),
                         divider: true,
                         trailing: AnyView(
                             KeyboardShortcuts.Recorder(for: .togglePeek)
@@ -515,8 +521,8 @@ private struct GeneralDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "cursorarrow",
-                        title: "快捷键在鼠标位置打开",
-                        subtitle: "开启后, 按下快捷键时主页面以鼠标为中心弹出; 关闭则贴菜单栏图标",
+                        title: String(localized: "快捷键在鼠标位置打开"),
+                        subtitle: String(localized: "开启后, 按下快捷键时主页面以鼠标为中心弹出; 关闭则贴菜单栏图标"),
                         divider: true,
                         trailing: AnyView(
                             Toggle("", isOn: Binding(
@@ -535,8 +541,8 @@ private struct GeneralDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "power",
-                        title: "开机自启",
-                        subtitle: "系统登录时自动启动 CC Peek",
+                        title: String(localized: "开机自启"),
+                        subtitle: String(localized: "系统登录时自动启动 CC Peek"),
                         divider: true,
                         trailing: AnyView(
                             Toggle("", isOn: Binding(
@@ -549,8 +555,8 @@ private struct GeneralDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "arrow.down.circle",
-                        title: "自动检查更新",
-                        subtitle: "定期检查 ccpeek.com/appcast.xml 是否有新版本",
+                        title: String(localized: "自动检查更新"),
+                        subtitle: String(localized: "定期检查 ccpeek.com/appcast.xml 是否有新版本"),
                         divider: true,
                         trailing: AnyView(
                             Toggle("", isOn: Binding(
@@ -566,9 +572,9 @@ private struct GeneralDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "arrow.triangle.2.circlepath",
-                        title: "检查更新",
-                        subtitle: "立即检查是否有可用的新版本",
-                        divider: false,
+                        title: String(localized: "检查更新"),
+                        subtitle: String(localized: "立即检查是否有可用的新版本"),
+                        divider: true,
                         trailing: AnyView(
                             Button("检查") {
                                 SoftwareUpdateController.shared.checkForUpdates()
@@ -577,7 +583,49 @@ private struct GeneralDetail: View {
                             .controlSize(.small)
                         )
                     )
+                    SettingsRow(
+                        leadingIcon: "globe",
+                        title: String(localized: "显示语言"),
+                        subtitle: String(localized: "切换后会自动重启 CC Peek 以应用新语言"),
+                        divider: false,
+                        trailing: AnyView(
+                            Picker("", selection: Binding(
+                                get: { currentLanguage },
+                                set: { newValue in
+                                    if newValue != currentLanguage {
+                                        pendingLanguage = newValue
+                                    }
+                                }
+                            )) {
+                                ForEach(AppLanguage.allCases) { lang in
+                                    Text(lang.displayName).tag(lang)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .controlSize(.small)
+                            .frame(maxWidth: 140)
+                        )
+                    )
                 }
+            }
+            .alert(
+                String(localized: "重启以切换语言?"),
+                isPresented: Binding(
+                    get: { pendingLanguage != nil },
+                    set: { if !$0 { pendingLanguage = nil } }
+                )
+            ) {
+                Button(String(localized: "取消"), role: .cancel) { pendingLanguage = nil }
+                Button(String(localized: "重启")) {
+                    if let lang = pendingLanguage {
+                        AppLanguageManager.set(lang)
+                        currentLanguage = lang
+                        AppLanguageManager.relaunch()
+                    }
+                }
+            } message: {
+                Text("切换显示语言需要重启 CC Peek。当前未保存的状态不会受影响。")
             }
 
             if !LaunchAtLoginManager.hint.isEmpty {
@@ -605,7 +653,7 @@ private struct GeneralDetail: View {
         case .success:
             launchAtLogin = LaunchAtLoginManager.isEnabled
         case .failure(let err):
-            statusMessage = "开机自启切换失败: \(err.localizedDescription)"
+            statusMessage = String(localized: "开机自启切换失败: \(err.localizedDescription)")
             launchAtLogin = LaunchAtLoginManager.isEnabled
         }
     }
@@ -618,13 +666,13 @@ private struct AboutDetail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DetailHeader(title: "关于")
+            DetailHeader(title: String(localized: "关于"))
 
             SurfaceCard {
                 VStack(spacing: 0) {
                     SettingsRow(
                         leadingIcon: "tag",
-                        title: "版本",
+                        title: String(localized: "版本"),
                         subtitle: nil,
                         divider: true,
                         trailing: AnyView(
@@ -635,8 +683,8 @@ private struct AboutDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "doc.text.magnifyingglass",
-                        title: "诊断日志",
-                        subtitle: "查看最近 24 小时的运行日志",
+                        title: String(localized: "诊断日志"),
+                        subtitle: String(localized: "查看最近 24 小时的运行日志"),
                         divider: true,
                         trailing: AnyView(
                             Button("查看") { DiagnosticLogWindowController.show() }
@@ -645,8 +693,8 @@ private struct AboutDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "exclamationmark.bubble",
-                        title: "反馈",
-                        subtitle: "复制诊断信息到剪贴板, 并在 Finder 标出最近一份崩溃日志",
+                        title: String(localized: "反馈"),
+                        subtitle: String(localized: "复制诊断信息到剪贴板, 并在 Finder 标出最近一份崩溃日志"),
                         divider: true,
                         trailing: AnyView(
                             Button("反馈") { FeedbackComposer.presentFeedback() }
@@ -655,8 +703,8 @@ private struct AboutDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "sparkles",
-                        title: "重看引导",
-                        subtitle: "重新运行首次配置流程",
+                        title: String(localized: "重看引导"),
+                        subtitle: String(localized: "重新运行首次配置流程"),
                         divider: true,
                         trailing: AnyView(
                             Button("打开") { OnboardingWindowController.show(force: true) }
@@ -665,8 +713,8 @@ private struct AboutDetail: View {
                     )
                     SettingsRow(
                         leadingIcon: "trash",
-                        title: "卸载说明",
-                        subtitle: "如何完全移除 CC Peek",
+                        title: String(localized: "卸载说明"),
+                        subtitle: String(localized: "如何完全移除 CC Peek"),
                         divider: false,
                         trailing: AnyView(
                             Button("查看") { showingUninstallSheet = true }
@@ -702,16 +750,16 @@ private struct FAQCard: View {
 
     private let items: [Item] = [
         Item(
-            question: "菜单栏图标看不见怎么办？",
-            answer: "可能被 Bartender / Hidden Bar / 刘海 / 其他 app 挤出可见区域。两条兜底：① 在「通用 → 全局快捷键」里录制热键，按下即可唤起 Dashboard；② 用 Spotlight / Launchpad 重新打开 CC Peek，会自动在屏幕右上角弹出 Dashboard。"
+            question: String(localized: "菜单栏图标看不见怎么办？"),
+            answer: String(localized: "可能被 Bartender / Hidden Bar / 刘海 / 其他 app 挤出可见区域。两条兜底：① 在「通用 → 全局快捷键」里录制热键，按下即可唤起 Dashboard；② 用 Spotlight / Launchpad 重新打开 CC Peek，会自动在屏幕右上角弹出 Dashboard。")
         ),
         Item(
-            question: "想让图标固定在菜单栏右侧？",
-            answer: "macOS 原生方式：按住 ⌘ 键拖动菜单栏图标到希望的位置，系统会记住顺序。Bartender / Hidden Bar 等第三方工具有各自的固定逻辑，参考其设置。"
+            question: String(localized: "想让图标固定在菜单栏右侧？"),
+            answer: String(localized: "macOS 原生方式：按住 ⌘ 键拖动菜单栏图标到希望的位置，系统会记住顺序。Bartender / Hidden Bar 等第三方工具有各自的固定逻辑，参考其设置。")
         ),
         Item(
-            question: "想彻底关闭 / 卸载 CC Peek？",
-            answer: "关闭进程：Dashboard 底部「退出」按钮，或终端 pkill -f CCPeekMac。完整卸载请见「关于 → 卸载说明」（清理 settings.json 中的 hook、应用数据、LaunchAgent 后再删除 .app）。"
+            question: String(localized: "想彻底关闭 / 卸载 CC Peek？"),
+            answer: String(localized: "关闭进程：Dashboard 底部「退出」按钮，或终端 pkill -f CCPeekMac。完整卸载请见「关于 → 卸载说明」（清理 settings.json 中的 hook、应用数据、LaunchAgent 后再删除 .app）。")
         ),
     ]
 
@@ -817,7 +865,7 @@ private struct DangerZoneDetail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DetailHeader(title: "危险操作")
+            DetailHeader(title: String(localized: "危险操作"))
 
             SurfaceCard {
                 VStack(alignment: .leading, spacing: 12) {
