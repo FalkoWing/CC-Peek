@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import CoreImage
 import CCPeekCore
 
 struct OnboardingView: View {
@@ -16,6 +17,9 @@ struct OnboardingView: View {
     @State private var plan: HookInstaller.Plan = HookInstaller.computePlan()
     @State private var applyError: String?
     @State private var applied = false
+
+    private static let appStoreURLString = "https://apps.apple.com/app/cc-peek/id6766753337"
+    private static let appStoreQRCodeImage = makeQRCodeImage(from: appStoreURLString)
 
     let onFinish: () -> Void
 
@@ -200,7 +204,7 @@ struct OnboardingView: View {
                 Text("在 iPhone 上安装 CC Peek")
                     .font(Theme.ui(22, weight: .bold))
                     .foregroundStyle(Theme.fg)
-                Text("iOS 版本即将上架 App Store。上架后此处会替换为可扫码下载的二维码")
+                Text("扫描二维码，或在 iPhone 上打开 App Store 链接下载。")
                     .font(Theme.ui(13.5))
                     .lineSpacing(4)
                     .foregroundStyle(Theme.fgMuted)
@@ -208,7 +212,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: 430)
             }
 
-            qrPlaceholder
+            appStoreQRCode
 
             Button {
                 onFinish()
@@ -251,23 +255,23 @@ struct OnboardingView: View {
         .frame(width: 96, height: 96)
     }
 
-    private var qrPlaceholder: some View {
+    private var appStoreQRCode: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.oklch(0.96, 0.005, 250))
                 .shadow(color: Color.oklch(0.04, 0, 0, alpha: 0.5), radius: 12, y: 8)
-            qrPattern
-                .padding(16)
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.oklch(0.10, 0.010, 250, alpha: 0.55))
-            VStack(spacing: 4) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.85))
-                Text("未上线")
-                    .font(Theme.mono(10, weight: .bold))
-                    .tracking(1.5)
-                    .foregroundStyle(Color.white.opacity(0.85))
+            if let image = Self.appStoreQRCodeImage {
+                Image(nsImage: image)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(16)
+            } else {
+                Text(Self.appStoreURLString)
+                    .font(Theme.mono(10, weight: .semibold))
+                    .foregroundStyle(Color.oklch(0.18, 0.010, 250))
+                    .multilineTextAlignment(.center)
+                    .padding(18)
             }
         }
         .frame(width: 180, height: 180)
@@ -277,48 +281,24 @@ struct OnboardingView: View {
         )
     }
 
-    /// 假二维码图案：5×5 finder pattern + 中间 9×9 伪随机方格（固定种子，视觉稳定）。
-    private var qrPattern: some View {
-        GeometryReader { geo in
-            let cell = geo.size.width / 21
-            ZStack(alignment: .topLeading) {
-                finderPattern(at: CGPoint(x: 0, y: 0), cell: cell)
-                finderPattern(at: CGPoint(x: cell * 14, y: 0), cell: cell)
-                finderPattern(at: CGPoint(x: 0, y: cell * 14), cell: cell)
-                ForEach(0..<14, id: \.self) { row in
-                    ForEach(0..<14, id: \.self) { col in
-                        if shouldFill(row: row, col: col) {
-                            Rectangle()
-                                .fill(Color.oklch(0.18, 0.010, 250))
-                                .frame(width: cell, height: cell)
-                                .offset(x: CGFloat(col + 4) * cell, y: CGFloat(row + 4) * cell)
-                        }
-                    }
-                }
-            }
+    private static func makeQRCodeImage(from string: String) -> NSImage? {
+        guard let data = string.data(using: .utf8),
+              let filter = CIFilter(name: "CIQRCodeGenerator") else {
+            return nil
         }
-        .aspectRatio(1, contentMode: .fit)
-    }
 
-    private func finderPattern(at p: CGPoint, cell: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            Rectangle()
-                .fill(Color.oklch(0.18, 0.010, 250))
-                .frame(width: cell * 7, height: cell * 7)
-            Rectangle()
-                .fill(Color.oklch(0.96, 0.005, 250))
-                .frame(width: cell * 5, height: cell * 5)
-                .offset(x: cell, y: cell)
-            Rectangle()
-                .fill(Color.oklch(0.18, 0.010, 250))
-                .frame(width: cell * 3, height: cell * 3)
-                .offset(x: cell * 2, y: cell * 2)
+        filter.setValue(data, forKey: "inputMessage")
+        filter.setValue("M", forKey: "inputCorrectionLevel")
+
+        guard let output = filter.outputImage else {
+            return nil
         }
-        .offset(x: p.x, y: p.y)
-    }
 
-    private func shouldFill(row: Int, col: Int) -> Bool {
-        ((row * 31 + col * 17 + 7) & 0x3) < 2
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
+        let rep = NSCIImageRep(ciImage: scaled)
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return image
     }
 
     // MARK: - Controls

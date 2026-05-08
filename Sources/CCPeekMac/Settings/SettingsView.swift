@@ -501,7 +501,7 @@ private struct GeneralDetail: View {
     @State private var automaticallyChecksForUpdates = SoftwareUpdateController.shared.automaticallyChecksForUpdates
     @State private var statusMessage: String?
     @State private var currentLanguage: AppLanguage = AppLanguageManager.current
-    @State private var pendingLanguage: AppLanguage?
+    @State private var languagePromptInFlight = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -593,7 +593,7 @@ private struct GeneralDetail: View {
                                 get: { currentLanguage },
                                 set: { newValue in
                                     if newValue != currentLanguage {
-                                        pendingLanguage = newValue
+                                        showLanguageRestartPrompt(for: newValue)
                                     }
                                 }
                             )) {
@@ -608,24 +608,6 @@ private struct GeneralDetail: View {
                         )
                     )
                 }
-            }
-            .alert(
-                String(localized: "重启以切换语言?"),
-                isPresented: Binding(
-                    get: { pendingLanguage != nil },
-                    set: { if !$0 { pendingLanguage = nil } }
-                )
-            ) {
-                Button(String(localized: "取消"), role: .cancel) { pendingLanguage = nil }
-                Button(String(localized: "重启")) {
-                    if let lang = pendingLanguage {
-                        AppLanguageManager.set(lang)
-                        currentLanguage = lang
-                        AppLanguageManager.relaunch()
-                    }
-                }
-            } message: {
-                Text("切换显示语言需要重启 CC Peek。当前未保存的状态不会受影响。")
             }
 
             if !LaunchAtLoginManager.hint.isEmpty {
@@ -655,6 +637,37 @@ private struct GeneralDetail: View {
         case .failure(let err):
             statusMessage = String(localized: "开机自启切换失败: \(err.localizedDescription)")
             launchAtLogin = LaunchAtLoginManager.isEnabled
+        }
+    }
+
+    private func showLanguageRestartPrompt(for lang: AppLanguage) {
+        guard !languagePromptInFlight else { return }
+        languagePromptInFlight = true
+
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "重启以切换语言?")
+            alert.informativeText = String(localized: "切换显示语言需要重启 CC Peek。当前未保存的状态不会受影响。")
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: String(localized: "重启"))
+            alert.addButton(withTitle: String(localized: "取消"))
+
+            let handleResponse: (NSApplication.ModalResponse) -> Void = { response in
+                languagePromptInFlight = false
+                if response == .alertFirstButtonReturn {
+                    AppLanguageManager.set(lang)
+                    currentLanguage = lang
+                    AppLanguageManager.relaunch()
+                } else {
+                    currentLanguage = AppLanguageManager.current
+                }
+            }
+
+            if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+                alert.beginSheetModal(for: window, completionHandler: handleResponse)
+            } else {
+                handleResponse(alert.runModal())
+            }
         }
     }
 }

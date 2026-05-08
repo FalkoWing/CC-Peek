@@ -23,7 +23,7 @@
 "Stop / Notification / SessionStart 等 6 类 Hook 已注册" = "Stop / Notification / SessionStart 等 6 类 Hook 已注册";
 "Terminal / iTerm2 切 tab 与窗口激活所需" = "Terminal / iTerm2 切 tab 与窗口激活所需";
 "VS Code 终端" = "VS Code 终端";
-"iOS 版本即将上架 App Store。上架后此处会替换为可扫码下载的二维码" = "iOS 版本即将上架 App Store。上架后此处会替换为可扫码下载的二维码";
+"扫描二维码，或在 iPhone 上打开 App Store 链接下载。" = "扫描二维码，或在 iPhone 上打开 App Store 链接下载。";
 "iPhone “%@” 想要连接到 CC Peek。\n仅信任你认识的设备。" = "iPhone “%@” 想要连接到 CC Peek。\n仅信任你认识的设备。";
 "macOS 原生方式：按住 ⌘ 键拖动菜单栏图标到希望的位置，系统会记住顺序。Bartender / Hidden Bar 等第三方工具有各自的固定逻辑，参考其设置。" = "macOS 原生方式：按住 ⌘ 键拖动菜单栏图标到希望的位置，系统会记住顺序。Bartender / Hidden Bar 等第三方工具有各自的固定逻辑，参考其设置。";
 "下一步" = "下一步";
@@ -94,7 +94,7 @@
 "开始" = "开始";
 "开机自启" = "开机自启";
 "开机自启切换失败: %@" = "开机自启切换失败: %@";
-"当前 .app 用 adhoc 签名, 系统登录项面板不接受. CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启 (与签名等级无关)." = "当前 .app 用 adhoc 签名, 系统登录项面板不接受. CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启 (与签名等级无关).";
+"当前 .app 不是正式 Developer ID 签名，系统登录项面板可能不接受。CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启。" = "当前 .app 不是正式 Developer ID 签名，系统登录项面板可能不接受。CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启。";
 "当前配置已是最新，应用后内容不变" = "当前配置已是最新，应用后内容不变";
 "快捷键在鼠标位置打开" = "快捷键在鼠标位置打开";
 "想彻底关闭 / 卸载 CC Peek？" = "想彻底关闭 / 卸载 CC Peek？";
@@ -111,7 +111,6 @@
 "最近一份崩溃日志已在 Finder 中标出。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具, 并附带 Finder 里高亮的 .ips 文件。" = "最近一份崩溃日志已在 Finder 中标出。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具, 并附带 Finder 里高亮的 .ips 文件。";
 "最近崩溃日志：%@" = "最近崩溃日志：%@";
 "最近崩溃日志：未找到" = "最近崩溃日志：未找到";
-"未上线" = "未上线";
 "未发现近期崩溃日志, 仅复制了基础诊断信息。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具。" = "未发现近期崩溃日志, 仅复制了基础诊断信息。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具。";
 "未在 settings.json 中检测到 CC Peek Hook 条目" = "未在 settings.json 中检测到 CC Peek Hook 条目";
 "未开启 (LaunchAgent)" = "未开启 (LaunchAgent)";

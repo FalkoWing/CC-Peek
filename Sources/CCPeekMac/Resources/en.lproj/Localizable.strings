@@ -23,7 +23,7 @@
 "Stop / Notification / SessionStart 等 6 类 Hook 已注册" = "6 hook types registered: Stop / Notification / SessionStart / etc.";
 "Terminal / iTerm2 切 tab 与窗口激活所需" = "Required to switch tabs and activate windows in Terminal / iTerm2";
 "VS Code 终端" = "VS Code Terminal";
-"iOS 版本即将上架 App Store。上架后此处会替换为可扫码下载的二维码" = "The iOS version is coming to the App Store. Once it's live, this area will show a QR code you can scan to download.";
+"扫描二维码，或在 iPhone 上打开 App Store 链接下载。" = "Scan the QR code, or open the App Store link on your iPhone to download.";
 "iPhone “%@” 想要连接到 CC Peek。\n仅信任你认识的设备。" = "iPhone “%@” wants to connect to CC Peek.\nOnly trust devices you recognize.";
 "macOS 原生方式：按住 ⌘ 键拖动菜单栏图标到希望的位置，系统会记住顺序。Bartender / Hidden Bar 等第三方工具有各自的固定逻辑，参考其设置。" = "Native macOS way: hold ⌘ and drag the menu bar icon to where you want it — the system remembers the order. Third-party tools like Bartender / Hidden Bar have their own pinning logic — see their settings.";
 "下一步" = "Next";
@@ -94,7 +94,7 @@
 "开始" = "Get started";
 "开机自启" = "Launch at login";
 "开机自启切换失败: %@" = "Couldn't change Launch at Login: %@";
-"当前 .app 用 adhoc 签名, 系统登录项面板不接受. CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启 (与签名等级无关)." = "The current .app is ad-hoc signed, which the Login Items panel won't accept. CC Peek will write a LaunchAgent plist into ~/Library/LaunchAgents/ to manage launch-at-login itself (unaffected by signing level).";
+"当前 .app 不是正式 Developer ID 签名，系统登录项面板可能不接受。CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启。" = "The current .app is not signed with the official Developer ID certificate, so the Login Items panel may not accept it. CC Peek will write a LaunchAgent plist into ~/Library/LaunchAgents/ to manage launch-at-login itself.";
 "当前配置已是最新，应用后内容不变" = "Current config is already up to date — applying makes no changes";
 "快捷键在鼠标位置打开" = "Open at the mouse position";
 "想彻底关闭 / 卸载 CC Peek？" = "How to fully shut down or uninstall CC Peek?";
@@ -111,7 +111,6 @@
 "最近一份崩溃日志已在 Finder 中标出。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具, 并附带 Finder 里高亮的 .ips 文件。" = "The most recent crash log has been revealed in Finder.\nPaste the clipboard contents into support@ccpeek.com, a GitHub issue, or any chat tool, and attach the highlighted .ips file.";
 "最近崩溃日志：%@" = "Recent crash log: %@";
 "最近崩溃日志：未找到" = "Recent crash log: not found";
-"未上线" = "Not yet released";
 "未发现近期崩溃日志, 仅复制了基础诊断信息。\n请把剪贴板内容粘贴到 support@ccpeek.com、GitHub issue 或任意聊天工具。" = "No recent crash log found — only basic diagnostic info was copied.\nPaste the clipboard contents into support@ccpeek.com, a GitHub issue, or any chat tool.";
 "未在 settings.json 中检测到 CC Peek Hook 条目" = "No CC Peek hook entry found in settings.json";
 "未开启 (LaunchAgent)" = "Off (LaunchAgent)";

@@ -23,10 +23,7 @@ enum AppLanguageManager {
     private static let key = "AppleLanguages"
 
     static var current: AppLanguage {
-        guard
-            let arr = UserDefaults.standard.array(forKey: key) as? [String],
-            let first = arr.first?.lowercased()
-        else {
+        guard let first = appLanguageCodes?.first?.lowercased() else {
             return .system
         }
         if first.hasPrefix("zh") { return .zhHans }
@@ -42,5 +39,15 @@ enum AppLanguageManager {
             defaults.set([lang.rawValue], forKey: key)
         }
         defaults.synchronize()
+    }
+
+    private static var appLanguageCodes: [String]? {
+        guard
+            let bundleID = Bundle.main.bundleIdentifier,
+            let domain = UserDefaults.standard.persistentDomain(forName: bundleID)
+        else {
+            return nil
+        }
+        return domain[key] as? [String]
     }
 }

@@ -3,13 +3,14 @@ import AppKit
 import ServiceManagement
 
 /// 开机自启包装. 优先用 SMAppService.mainApp; 当其状态 .notFound 时
-/// (典型: adhoc 签名 + macOS 26 不被纳入"系统登录项"列表),
 /// fallback 到老式 LaunchAgent plist —— 写一个 plist 到 ~/Library/LaunchAgents/
 /// 由 launchd 在登录时启动. 这种方式不依赖签名等级, 跨 macOS 版本稳定.
 @MainActor
 enum LaunchAtLoginManager {
     private static let agentLabel = "com.ccpeek.mac.agent"
     private static let legacyAgentLabels = ["me.lifawei.ccpeek.agent"]
+    private static let officialDeveloperIDAuthority = "Developer ID Application: Fawei Li (M7727NJV5J)"
+    private static let officialTeamIdentifier = "M7727NJV5J"
 
     /// 当前实际生效的实现方式. UI 用来显示"用什么方式管的"
     enum Backend: String {
@@ -52,12 +53,10 @@ enum LaunchAtLoginManager {
     }
 
     static var hint: String {
-        switch preferredBackend {
-        case .smAppService:
+        if isOfficialReleaseSignature {
             return ""
-        case .launchAgent:
-            return String(localized: "当前 .app 用 adhoc 签名, 系统登录项面板不接受. CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启 (与签名等级无关).")
         }
+        return String(localized: "当前 .app 不是正式 Developer ID 签名，系统登录项面板可能不接受。CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启。")
     }
 
     static func setEnabled(_ enabled: Bool) -> Result<Void, Error> {
@@ -79,6 +78,39 @@ enum LaunchAtLoginManager {
     }
 
     // MARK: - LaunchAgent backend
+
+    private static var isOfficialReleaseSignature: Bool {
+        guard let details = codesignDetails(for: Bundle.main.bundleURL) else {
+            return false
+        }
+        return details.contains("Authority=\(officialDeveloperIDAuthority)")
+            && details.contains("TeamIdentifier=\(officialTeamIdentifier)")
+            && !details.contains("Signature=adhoc")
+    }
+
+    private static func codesignDetails(for appURL: URL) -> String? {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        task.arguments = ["-dv", "--verbose=4", appURL.path]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+        } catch {
+            return nil
+        }
+
+        guard task.terminationStatus == 0 else {
+            return nil
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8)
+    }
 
     private static var launchAgentURL: URL {
         launchAgentURL(for: agentLabel)

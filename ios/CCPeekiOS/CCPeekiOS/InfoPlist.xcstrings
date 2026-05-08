@@ -1,7 +1,30 @@
 {
   "sourceLanguage" : "zh-Hans",
-  "version" : "1.0",
   "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "CC Peek"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "CCPeekiOS"
+          }
+        }
+      }
+    },
     "NSLocalNetworkUsageDescription" : {
       "comment" : "Local Network usage description shown in system permission alert",
       "localizations" : {
@@ -19,5 +42,6 @@
         }
       }
     }
-  }
+  },
+  "version" : "1.0"
 }

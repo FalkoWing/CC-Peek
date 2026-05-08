@@ -65,6 +65,15 @@ for lproj in Resources/*.lproj; do
     cp -R "$lproj" "$APP/Contents/Resources/"
 done
 
+# UI 文案本地化。String(localized:) / SwiftUI Text 默认查主 app bundle,
+# 所以 Localizable.strings 也要出现在 Contents/Resources/*.lproj 下。
+for lproj in Sources/CCPeekMac/Resources/*.lproj; do
+    [[ -d "$lproj" ]] || continue
+    locale="$(basename "$lproj")"
+    mkdir -p "$APP/Contents/Resources/$locale"
+    cp "$lproj"/*.strings "$APP/Contents/Resources/$locale/"
+done
+
 SPARKLE_FRAMEWORK="$(find -L .build/artifacts -path "*/Sparkle.framework" -type d | head -n 1 || true)"
 if [[ -z "$SPARKLE_FRAMEWORK" ]]; then
     echo "Sparkle.framework 未找到, 请先确认 SwiftPM binary artifact 已下载" >&2
