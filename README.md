@@ -87,6 +87,19 @@ open "/Applications/CC Peek.app"
 ./scripts/build-dmg.sh
 ```
 
+### 关于签名
+
+官网 `ccpeek.com/download` 的 DMG 是 Developer ID 签名 + Apple 公证，双击即可打开。
+
+`./scripts/build-app.sh` 输出的是 ad-hoc 签名包，第一次打开会被 macOS Gatekeeper 拦截（"来自身份不明的开发者"），二选一即可：
+
+- 在 Finder 里右键 `CC Peek.app` → 打开 → 弹窗里再点"打开"（只需一次）
+- 或命令行去除隔离属性：
+
+```bash
+xattr -dr com.apple.quarantine "build/CC Peek.app"
+```
+
 ### iOS app
 
 用 Xcode 打开 `ios/CCPeekiOS/CCPeekiOS.xcodeproj`，在 target 设置里选自己的 Apple Developer Team，连真机跑 `CCPeekiOS` target 即可。Mac 端 `CC Peek.app` 同时运行后两端会自动发现彼此，点击 → Mac 弹信任确认 → 配对完成。
