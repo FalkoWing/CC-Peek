@@ -19,3 +19,14 @@ xcuserdata/
 
 # 内部操作清单 (开源筹备文档, 不公开)
 docs/open-source-plan.md
+
+# 内部活文档 (v1.1+ 开发计划与规则, 工作树参考用, 不公开)
+PRD.md
+PROGRESS.md
+
+# v1.0 已交付产品的冻结档案 (工作树参考用, 不公开)
+docs/PRD-v1.0.md
+docs/PROGRESS-v1.0.md
+
+# 内部发布脚本 (Developer ID 签名 + 公证, 商业渠道, 不公开)
+scripts/build-release.sh
