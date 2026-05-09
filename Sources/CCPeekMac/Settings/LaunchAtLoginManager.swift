@@ -8,7 +8,6 @@ import ServiceManagement
 @MainActor
 enum LaunchAtLoginManager {
     private static let agentLabel = "com.ccpeek.mac.agent"
-    private static let legacyAgentLabels = ["me.lifawei.ccpeek.agent"]
 
     /// 当前实际生效的实现方式. UI 用来显示"用什么方式管的"
     enum Backend: String {
@@ -82,12 +81,7 @@ enum LaunchAtLoginManager {
     }
 
     private static func launchAgentPlistExists() -> Bool {
-        if FileManager.default.fileExists(atPath: launchAgentURL.path) {
-            return true
-        }
-        return legacyAgentLabels.contains {
-            FileManager.default.fileExists(atPath: launchAgentURL(for: $0).path)
-        }
+        FileManager.default.fileExists(atPath: launchAgentURL.path)
     }
 
     private static func appExecutablePath() -> String {
@@ -95,7 +89,6 @@ enum LaunchAtLoginManager {
     }
 
     private static func installLaunchAgent() -> Result<Void, Error> {
-        removeLegacyLaunchAgents()
         let plist: [String: Any] = [
             "Label": agentLabel,
             "ProgramArguments": [appExecutablePath()],
@@ -124,7 +117,6 @@ enum LaunchAtLoginManager {
     }
 
     private static func removeLaunchAgent() -> Result<Void, Error> {
-        removeLegacyLaunchAgents()
         let url = launchAgentURL
         guard FileManager.default.fileExists(atPath: url.path) else {
             return .success(())
@@ -137,12 +129,4 @@ enum LaunchAtLoginManager {
         }
     }
 
-    private static func removeLegacyLaunchAgents() {
-        for label in legacyAgentLabels {
-            let url = launchAgentURL(for: label)
-            if FileManager.default.fileExists(atPath: url.path) {
-                try? FileManager.default.removeItem(at: url)
-            }
-        }
-    }
 }

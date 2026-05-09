@@ -10,7 +10,6 @@ import CCPeekCore
 enum HookInstaller {
     static let markerKey = "_ccpeek_marker"
     static let markerValue = "com.ccpeek.mac"
-    private static let legacyMarkerValues = ["me.lifawei.ccpeek"]
 
     static let subscribedEvents: [String] = [
         "SessionStart",
@@ -260,8 +259,7 @@ enum HookInstaller {
     private static func groupContainsOurMarker(_ group: [String: Any]) -> Bool {
         guard let hooks = group["hooks"] as? [[String: Any]] else { return false }
         return hooks.contains {
-            guard let value = $0[markerKey] as? String else { return false }
-            return value == markerValue || legacyMarkerValues.contains(value)
+            ($0[markerKey] as? String) == markerValue
         }
     }
 }
