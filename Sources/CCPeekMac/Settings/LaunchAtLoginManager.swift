@@ -9,6 +9,9 @@ import ServiceManagement
 enum LaunchAtLoginManager {
     private static let agentLabel = "com.ccpeek.mac.agent"
     private static let legacyAgentLabels = ["me.lifawei.ccpeek.agent"]
+    // 用于识别"这份 .app 是不是 GitHub Releases / App Store 分发的官方签名版本".
+    // 仅影响 `hint` 中是否显示"非正式签名"文案, 不影响开机自启功能本身.
+    // fork / 自行构建出来的 ad-hoc 包会自然走"非官方"分支, 一切照常工作, 无需修改这两个常量.
     private static let officialDeveloperIDAuthority = "Developer ID Application: Fawei Li (M7727NJV5J)"
     private static let officialTeamIdentifier = "M7727NJV5J"
 
