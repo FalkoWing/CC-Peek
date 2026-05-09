@@ -9,11 +9,6 @@ import ServiceManagement
 enum LaunchAtLoginManager {
     private static let agentLabel = "com.ccpeek.mac.agent"
     private static let legacyAgentLabels = ["me.lifawei.ccpeek.agent"]
-    // 用于识别"这份 .app 是不是 GitHub Releases / App Store 分发的官方签名版本".
-    // 仅影响 `hint` 中是否显示"非正式签名"文案, 不影响开机自启功能本身.
-    // fork / 自行构建出来的 ad-hoc 包会自然走"非官方"分支, 一切照常工作, 无需修改这两个常量.
-    private static let officialDeveloperIDAuthority = "Developer ID Application: Fawei Li (M7727NJV5J)"
-    private static let officialTeamIdentifier = "M7727NJV5J"
 
     /// 当前实际生效的实现方式. UI 用来显示"用什么方式管的"
     enum Backend: String {
@@ -55,13 +50,6 @@ enum LaunchAtLoginManager {
         }
     }
 
-    static var hint: String {
-        if isOfficialReleaseSignature {
-            return ""
-        }
-        return String(localized: "当前 .app 不是正式 Developer ID 签名，系统登录项面板可能不接受。CC Peek 会写一个 LaunchAgent plist 到 ~/Library/LaunchAgents/ 自己管开机自启。")
-    }
-
     static func setEnabled(_ enabled: Bool) -> Result<Void, Error> {
         switch preferredBackend {
         case .smAppService:
@@ -81,39 +69,6 @@ enum LaunchAtLoginManager {
     }
 
     // MARK: - LaunchAgent backend
-
-    private static var isOfficialReleaseSignature: Bool {
-        guard let details = codesignDetails(for: Bundle.main.bundleURL) else {
-            return false
-        }
-        return details.contains("Authority=\(officialDeveloperIDAuthority)")
-            && details.contains("TeamIdentifier=\(officialTeamIdentifier)")
-            && !details.contains("Signature=adhoc")
-    }
-
-    private static func codesignDetails(for appURL: URL) -> String? {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        task.arguments = ["-dv", "--verbose=4", appURL.path]
-
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = pipe
-
-        do {
-            try task.run()
-            task.waitUntilExit()
-        } catch {
-            return nil
-        }
-
-        guard task.terminationStatus == 0 else {
-            return nil
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)
-    }
 
     private static var launchAgentURL: URL {
         launchAgentURL(for: agentLabel)

@@ -610,13 +610,6 @@ private struct GeneralDetail: View {
                 }
             }
 
-            if !LaunchAtLoginManager.hint.isEmpty {
-                Text(LaunchAtLoginManager.hint)
-                    .font(Theme.ui(11.5))
-                    .foregroundStyle(Theme.fgDim)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 4)
-            }
             if let msg = statusMessage {
                 Text(msg)
                     .font(Theme.ui(11.5))
