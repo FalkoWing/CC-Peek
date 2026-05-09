@@ -1,50 +1,52 @@
 # CC Peek
 
-把本机多个 [Claude Code](https://claude.com/claude-code) 进程的状态实时同步到一台 iPhone，并允许从手机一键切回对应的终端窗口。
+![CC Peek hero banner](assets/banners/hero_en.png)
 
-把"需要审批 / 等待输入 / 已完成"这类信号从主屏搬到旁边的常驻第二屏，主屏可以专心写代码。
+English | [简体中文](./README.zh-CN.md)
 
-- **官网**：[ccpeek.com](https://ccpeek.com)
+CC Peek syncs the status of multiple local [Claude Code](https://claude.com/claude-code) sessions to an iPhone in real time, and lets you jump back to the matching terminal window with one tap.
 
-## 这个工具解决什么问题
+It moves signals like "needs approval", "waiting for input", and "finished" onto a persistent side screen, so your main display can stay focused on coding.
 
-同时跑多个 Claude Code 进程时，"哪个在等我审批？哪个跑完了？"这类信号会被埋在终端 tab、菜单栏、通知中心里，需要不停切窗口去看。
+- **Website**: [ccpeek.com](https://ccpeek.com)
 
-CC Peek 把这些状态聚合后实时推送到一台 iPhone 当作常驻第二屏：
+## What problem does it solve?
 
-- iPhone 上一眼看到所有进程的状态（`ACTIVE` / `WAITING INPUT` / `AWAIT PERMISSION` / `UNKNOWN`）。
-- 点一下进程卡片，Mac 端把对应终端窗口切到前台。
-- 不依赖任何云服务 / 账号，Mac 与 iPhone 走 Apple MultipeerConnectivity 在同一近场网络通信。
+When you run several Claude Code sessions at the same time, questions like "which one is waiting for my approval?" or "which one just finished?" get buried in terminal tabs, the menu bar, and notifications. You end up switching windows just to check status.
 
-## 安装
+CC Peek aggregates those states and pushes them to an iPhone as a persistent side screen:
 
-| 平台 | 渠道 |
+- See all Claude Code sessions at a glance (`ACTIVE` / `WAITING INPUT` / `AWAIT PERMISSION` / `UNKNOWN`).
+- Tap a session card on iPhone to bring the matching terminal window to the front on your Mac.
+- No cloud service or account required. Mac and iPhone communicate nearby through Apple MultipeerConnectivity.
+
+## Installation
+
+| Platform | Channel |
 |---|---|
-| macOS | [ccpeek.com/download](https://ccpeek.com/download) 或 [GitHub Releases](https://github.com/FalkoWing/CC-Peek/releases) |
-| iOS | App Store 搜索 "CC Peek" |
+| macOS | [ccpeek.com/download](https://ccpeek.com/download) or [GitHub Releases](https://github.com/FalkoWing/CC-Peek/releases) |
+| iOS | [App Store](https://apps.apple.com/app/cc-peek/id6766753337) |
 
-首次打开 Mac app 会引导你装 Claude Code 的 hook（写入 `~/.claude/settings.json`，写入前自动备份）。iOS app 在同网段会自动发现 Mac，点击信任即配对完成。
+On first launch, the Mac app guides you through installing the Claude Code hook. It writes to `~/.claude/settings.json` and automatically creates a backup before changing an existing file. The iOS app discovers nearby Macs; tap trust to pair.
 
-未配对状态下也可以走"演示模式"完整体验 iOS UI（4 个进程、状态切换、卡片动画）。
-
-## 系统要求
+## Requirements
 
 - macOS 14+
 - iOS 17+
-- Mac 与 iPhone 在同一近场网络（Wi-Fi / 蓝牙）
-- iPhone 与 Mac 都授予了"本地网络"权限
-- Claude Code 已安装，且允许写 `~/.claude/settings.json`
+- Mac and iPhone must be discoverable nearby; being on the same local network is the most stable setup, while the actual link is chosen by Apple MultipeerConnectivity at the system level
+- Local Network permission granted on both iPhone and Mac
+- Claude Code installed, with permission to write `~/.claude/settings.json`
 
-## 主要功能
+## Features
 
-- **进程状态聚合**：监听 Claude Code 的 `SessionStart` / `UserPromptSubmit` / `PreToolUse` / `Notification` / `Stop` / `SessionEnd` 6 类 hook 事件，识别出 4 种状态。
-- **一键切回终端**：Terminal.app / iTerm2 按 tty 精确切到具体 tab；Ghostty / Warp / VS Code / WezTerm / Alacritty / Kitty 等降级为激活对应应用。
-- **菜单栏 + Dashboard + 全局快捷键**：菜单栏图标显示进程总数与连接状态，Hook 异常时显示红点；Dashboard popover 与全局快捷键提供多种打开方式。
-- **1:1 配对 + 白名单**：基于 displayName + 配对 token 的白名单，本地持久化，避免误连。
-- **iPhone 端体验**：横竖屏自适应、屏幕常亮、5 分钟 stale 分层、下拉刷新。
-- **Sparkle 自动更新**（Mac 端）。
+- **Session state aggregation**: listens to 6 Claude Code hook events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `Notification`, `Stop`, and `SessionEnd`, then maps them into 4 visible states.
+- **One-tap terminal switching**: Terminal.app and iTerm2 can switch precisely to the matching tab by tty; Ghostty, Warp, VS Code, WezTerm, Alacritty, Kitty, and others fall back to activating the app.
+- **Menu bar, dashboard, and global shortcut**: the menu bar icon shows session count and connection status, with a red dot when hook health checks fail; the dashboard popover and global shortcut provide multiple entry points.
+- **1:1 pairing and allowlist**: a local allowlist based on display name and pairing token helps prevent accidental connections.
+- **iPhone experience**: landscape and portrait layouts, keep-screen-awake support, 5-minute stale state tiering, and pull-to-refresh.
+- **Sparkle updates** for the Mac app.
 
-## 架构
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -60,11 +62,24 @@ flowchart LR
     Bridge --> Terminal["TerminalSwitcher"]
 ```
 
-- Hook 是原生 Swift 单文件二进制，不依赖用户 shell / Node / Python 等环境。
-- Mac ↔ iPhone 通信走 MultipeerConnectivity，service type `cc-peek-v1`，强制 TLS。
-- 不做远程跨网访问。
+- The hook is a native single-file Swift binary and does not depend on the user's shell, Node, Python, or other runtime environments.
+- Mac and iPhone communicate through MultipeerConnectivity, using service type `cc-peek-v1` and encrypted transport (`MCEncryptionPreference.required`).
+- CC Peek does not provide remote cross-network access.
 
-## 从源码构建
+## Privacy and permissions
+
+- **Local nearby communication**: Mac and iPhone discover and communicate with each other through Apple MultipeerConnectivity nearby. No account is required, and traffic is not relayed through a CC Peek cloud service.
+- **Claude Code Hook**: the Mac app writes command hooks for `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `Notification`, `Stop`, and `SessionEnd` to `~/.claude/settings.json`. The entries point to `CCPeekHook` and include a `_ccpeek_marker` marker so they can be identified and removed later.
+- **Automatic backup**: if `~/.claude/settings.json` already exists, CC Peek creates a backup next to it named `settings.json.ccpeek-backup-<timestamp>` before writing.
+- **Uninstall and cleanup**: use "Settings -> Danger zone -> Clear configuration data" in the Mac app to remove the hook, paired iPhones, launch-at-login setting, global shortcut, onboarding/preferences, and app data under `~/Library/Application Support/cc-peek/`. You can also run `--uninstall-hook` from the command-line entry points below to remove only the hook.
+
+## Build from source
+
+Prerequisites:
+
+- Xcode 15.3+ with the Swift 5.10 toolchain
+- macOS 14+
+- A physical iOS device and an Apple Developer Team, only if you want to build or debug the iOS app
 
 ### macOS app
 
@@ -74,27 +89,27 @@ cd CC-Peek
 ./scripts/build-app.sh
 ```
 
-输出 `build/CC Peek.app`，使用 ad-hoc 签名，可直接 `open` 或 `ditto` 到 `/Applications`：
+This produces `build/CC Peek.app` with an ad-hoc signature. You can open it directly or copy it to `/Applications`:
 
 ```bash
 ditto "build/CC Peek.app" "/Applications/CC Peek.app"
 open "/Applications/CC Peek.app"
 ```
 
-构建可分享 DMG（仍是 ad-hoc 签名）：
+To build a shareable DMG, also ad-hoc signed:
 
 ```bash
 ./scripts/build-dmg.sh
 ```
 
-### 关于签名
+### Code signing
 
-官网 `ccpeek.com/download` 的 DMG 是 Developer ID 签名 + Apple 公证，双击即可打开。
+The DMG from `ccpeek.com/download` is Developer ID signed and Apple-notarized, so it can be opened by double-clicking.
 
-`./scripts/build-app.sh` 输出的是 ad-hoc 签名包，第一次打开会被 macOS Gatekeeper 拦截（"来自身份不明的开发者"），二选一即可：
+The app produced by `./scripts/build-app.sh` is ad-hoc signed. On first launch, macOS Gatekeeper may block it as coming from an unidentified developer. Use one of these options:
 
-- 在 Finder 里右键 `CC Peek.app` → 打开 → 弹窗里再点"打开"（只需一次）
-- 或命令行去除隔离属性：
+- In Finder, right-click `CC Peek.app`, choose Open, then click Open again in the dialog. This is only needed once.
+- Or remove the quarantine attribute from the command line:
 
 ```bash
 xattr -dr com.apple.quarantine "build/CC Peek.app"
@@ -102,58 +117,66 @@ xattr -dr com.apple.quarantine "build/CC Peek.app"
 
 ### iOS app
 
-用 Xcode 打开 `ios/CCPeekiOS/CCPeekiOS.xcodeproj`，在 target 设置里选自己的 Apple Developer Team，连真机跑 `CCPeekiOS` target 即可。Mac 端 `CC Peek.app` 同时运行后两端会自动发现彼此，点击 → Mac 弹信任确认 → 配对完成。
+Open `ios/CCPeekiOS/CCPeekiOS.xcodeproj` in Xcode, select your Apple Developer Team in the target settings, connect a physical device, and run the `CCPeekiOS` target. With the Mac app running at the same time, both sides should discover each other; tap on iPhone, confirm trust on Mac, and pairing is complete.
 
-### 命令行入口
+### Command-line entry points
 
 ```bash
 "/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --install-hook
 "/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --uninstall-hook
 "/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --print-hook-path
 
-# 解析某个 PID 的父进程链与 tty
+# Inspect the parent process chain and tty for a PID
 "/Applications/CC Peek.app/Contents/MacOS/CCPeekMac" --debug-tree <pid>
 ```
 
-### Mock client（无真机时验证 MPC 协议）
+### Mock client
+
+Use this to validate the MPC protocol without a physical iPhone:
 
 ```bash
 swift run CCPeekMockClient
-# 命令: snapshot | switch <process_id> | quit
+# Commands: snapshot | switch <process_id> | quit
 
-# 多设备区分
+# Distinguish multiple mock devices
 CCPEEK_MOCK_NAME=DemoPhone swift run CCPeekMockClient
 ```
 
-## 工程结构
+## Project layout
 
 ```text
 .
 ├── Package.swift
 ├── Sources
-│   ├── CCPeekCore          # 跨平台模型 / hook envelope / MPC transport
-│   ├── CCPeekHook          # Claude Code hook 二进制
-│   ├── CCPeekMac           # macOS 菜单栏 app
+│   ├── CCPeekCore          # Cross-platform models / hook envelope / MPC transport
+│   ├── CCPeekHook          # Claude Code hook binary
+│   ├── CCPeekMac           # macOS menu bar app
 │   └── CCPeekMockClient    # Mock iPhone CLI
-├── ios/CCPeekiOS           # iOS SwiftUI app（Xcode 工程）
-├── Resources               # macOS app Info.plist 与 entitlements
+├── ios/CCPeekiOS           # iOS SwiftUI app (Xcode project)
+├── Resources               # macOS app Info.plist and entitlements
 ├── scripts                 # build-app.sh / build-dmg.sh
-└── docs/glossary.md        # 跨端术语对照
+└── docs/glossary.md        # Cross-platform terminology glossary
 ```
 
-## 已知限制
+## Known limitations
 
-- **配对当前为 1:1**：一台 Mac 同时只接受一台 iPhone。
-- **部分终端只能激活 app**：Ghostty / Warp / VS Code / WezTerm / Alacritty / Kitty 等无法精确切到具体 tab。
-- **首次切终端会弹自动化权限**：macOS 系统级 TCC 弹窗，授权一次后续不再出现。
-- **本地网络权限是硬依赖**：iPhone / Mac 任一端拒绝则无法发现对端。
+- **Pairing is currently 1:1**: one Mac accepts only one iPhone at a time.
+- **Some terminals can only be activated at app level**: Ghostty, Warp, VS Code, WezTerm, Alacritty, Kitty, and others cannot be switched to a specific tab.
+- **The first terminal switch may trigger Automation permission**: this is a macOS TCC prompt. Grant it once and it should not appear again.
+- **Local Network permission is required**: if either iPhone or Mac denies it, the devices cannot discover each other.
 
-## 协议
+## License
 
-Apache License 2.0。详见 [LICENSE](./LICENSE) 与 [NOTICE](./NOTICE)。
+Apache License 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
 
-## 链接
+## Third-party open source components
 
-- 官网：[ccpeek.com](https://ccpeek.com)
-- Issues：[github.com/FalkoWing/CC-Peek/issues](https://github.com/FalkoWing/CC-Peek/issues)
-- Releases：[github.com/FalkoWing/CC-Peek/releases](https://github.com/FalkoWing/CC-Peek/releases)
+- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts): global shortcut recording and management (MIT License).
+- [Sparkle](https://sparkle-project.org/): macOS update framework (MIT License).
+
+## Links
+
+- Website: [ccpeek.com](https://ccpeek.com)
+- App Store: [apps.apple.com/app/cc-peek/id6766753337](https://apps.apple.com/app/cc-peek/id6766753337)
+- Issues: [github.com/FalkoWing/CC-Peek/issues](https://github.com/FalkoWing/CC-Peek/issues)
+- Releases: [github.com/FalkoWing/CC-Peek/releases](https://github.com/FalkoWing/CC-Peek/releases)
