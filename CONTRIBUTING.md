@@ -1,26 +1,28 @@
 # Contributing
 
-CC Peek 目前由一人维护，欢迎以下形式的贡献：
+English | [简体中文](./CONTRIBUTING.zh-CN.md)
 
-## Bug / 功能建议
+CC Peek is currently maintained by one person. Contributions are welcome in the following forms.
 
-开 [Issue](https://github.com/FalkoWing/CC-Peek/issues)。麻烦带上：
+## Bugs and feature requests
 
-- 复现步骤
-- macOS / iOS 系统版本
-- 当前用的是 [ccpeek.com](https://ccpeek.com) / App Store 分发版本，还是自己 `./scripts/build-app.sh` 构建出来的 ad-hoc 版
+Open an [Issue](https://github.com/FalkoWing/CC-Peek/issues). Please include:
 
-## Pull Request
+- Steps to reproduce
+- macOS / iOS versions
+- Whether you are using the [ccpeek.com](https://ccpeek.com) / App Store distribution, or an ad-hoc build produced by `./scripts/build-app.sh`
 
-- **小改动**（typo、局部 bug fix）：直接发 PR。
-- **较大改动**（新功能 / 架构调整）：先开 Issue 讨论方向，避免做完才发现想法不一致。
-- 提 PR 前请确认 `swift build` 通过；改动涉及 iOS 部分时请用 Xcode 构建一次。
-- 改了 UI 文案：请同步更新中文与英文资源（Mac 端 `Sources/CCPeekMac/Resources/{en,zh-Hans}.lproj/Localizable.strings`；iOS 端 `Localizable.xcstrings`）。
+## Pull requests
 
-## 本地构建
+- **Small changes** such as typos or focused bug fixes: feel free to open a PR directly.
+- **Larger changes** such as new features or architecture changes: please open an Issue first to discuss the direction, so we do not discover a mismatch after the work is done.
+- Before opening a PR, make sure `swift build` passes. If the change touches the iOS app, please also build it once in Xcode.
+- If you change UI copy, update both Chinese and English resources: Mac uses `Sources/CCPeekMac/Resources/{en,zh-Hans}.lproj/Localizable.strings`; iOS uses `Localizable.xcstrings`.
 
-见 [README.md 「从源码构建」](./README.md#从源码构建)。
+## Local build
 
-## 响应节奏
+See [Build from source](./README.md#build-from-source) in the README.
 
-单人项目，Issue / PR 响应可能延迟数日。涉及崩溃、数据丢失等问题会优先处理。
+## Response time
+
+This is a single-maintainer project, so Issue / PR responses may be delayed by a few days. Crashes, data loss, and similar problems are prioritized.
